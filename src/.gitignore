@@ -12,6 +12,7 @@
 !/config
 !/core
 !/crystallization
+!/curvature
 !/function
 !/generic
 !/gridtools
@@ -27,6 +28,7 @@
 !/reference
 !/secondarystructure
 !/setup
+!/stanmath
 !/tools
 !/vatom
 !/vesselbase

@@ -1,0 +1,14 @@
+# Testing singularities. First frame is at the straight line. Tenth frame is at 90 deg.,
+# where the gradient on the central atom is null.
+
+r:   CURVATURES ATOMS1=1,2,3 ATOMS2=2,3,1 MEAN  MAX={BETA=.01}  MIN1={BETA=100}  LOWEST HIGHEST
+
+ri:  CURVATURES ATOMS1=1,2,3 ATOMS2=2,3,1 MEAN  MAX={BETA=.01}  MIN1={BETA=100}  LOWEST HIGHEST INVERSE
+
+
+PRINT FILE=COLVAR ARG=* FMT=%8.4f
+
+DUMPMULTICOLVAR DATA=r FILE=MCV_r.xyz
+DUMPMULTICOLVAR DATA=ri FILE=MCV_ri.xyz
+
+ENDPLUMED

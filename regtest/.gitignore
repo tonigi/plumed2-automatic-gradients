@@ -16,6 +16,8 @@
 !/manyrestraints
 !/molfile_plugin
 !/metainference
+!/stanmath
+!/curvature
 # These files we just want to ignore completely
 tmp
 report.txt

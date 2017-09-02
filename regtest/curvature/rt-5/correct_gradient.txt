@@ -1,0 +1,5 @@
+Computed symbolically at 6 digits precition.
+
+⎡ 22.8808   0.e-146   0⎤
+⎢-43.7834  -9.30645   0⎥
+⎣ 20.9026   9.30645   0⎦
