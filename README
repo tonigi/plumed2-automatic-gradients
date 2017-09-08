@@ -3,24 +3,28 @@ Automatic Gradient Computation for Collective Variables in PLUMED 2
 
 This repository contains example code from the paper "Automatic
 Gradient Computation for Collective Variables in PLUMED 2",
-illustrating two approaches to automatic gradient computation.
+illustrating two approaches to automatic gradient computation for
+collective variables in PLUMED.
 
 It is a fork of the PLUMED 2 repository (www.plumed.org) taken at
 release v2.3.2.
 
 The new code is contained in modules "src/curvature" (code generation
-approach from symbolic expressions in SymPy) and "src/stanmath" (code
+approach from symbolic expressions by SymPy) and "src/stanmath" (code
 differentiation approach).
 
 Example files with regression tests are provided in the directories
-"regtest/curvature" and "regtest/stanmath".
+(PLUMED submodules) "regtest/curvature" and "regtest/stanmath", which
+can be enabled or disabled independently.  The rest of PLUMED 2
+repository is unchanged. You may use the supplied C++ files as
+templates to implement your own CVs.
 
-The Stan Math library, http://mc-stan.org/users/interfaces/math, is
-referenced as as a GIT submodule; hence, you may need to clone this
-repository with the --recursive option.
+(Note: if you are using GIT, the Stan Math library,
+http://mc-stan.org/users/interfaces/math, is referenced as a
+submodule; you may need to clone this repository with the --recursive
+option.)
 
-The rest of PLUMED 2 repository is unchanged.  To build and test,
-please follow the "Quick compilation instructions" below.
+
 
 
 Approach 1 - Symbolic differentiation with code generation
@@ -28,9 +32,10 @@ Approach 1 - Symbolic differentiation with code generation
 
 The source files are in src/curvature and the sympy_codegen
 directory. To regenerate the code, execute the CurvatureCodegen.ipynb
-file (you will need Sympy, available from sympy.org).
+file (you will need Sympy, available from sympy.org; easiest is
+through Conda).
 
-To test, on most common systems the following instructions should get
+To test, on most common machines the following instructions should get
 you started. After extracting the distribution:
 
 > ./configure --enable-modules=+curvature:-stanmath
