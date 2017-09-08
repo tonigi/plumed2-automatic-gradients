@@ -4,7 +4,7 @@
 #ifndef __PLUMED_curvature_Wrapper_h
 #define __PLUMED_curvature_Wrapper_h
 
-#define CURVATURE_CITATION "Giorgino T., High-level Implementation and Automatic Gradient Computation Approaches for PLUMED 2 Collective Variables (provisional title)."
+#define CURVATURE_CITATION "Giorgino T.,  Automatic Gradient Computation Approaches for PLUMED 2  (provisional title)."
 
 namespace PLMD {
 namespace curvature {
