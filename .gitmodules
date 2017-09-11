@@ -1,4 +1,4 @@
 [submodule "src/stanmath/math"]
 	path = src/stanmath/math
-	url = git@github.com:stan-dev/math.git
+	url = http://github.com/stan-dev/math.git
 	branch = origin/v2.16.0
