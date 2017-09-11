@@ -9,15 +9,15 @@ collective variables in PLUMED.
 It is a fork of the PLUMED 2 repository (www.plumed.org) taken at
 release v2.3.2.
 
-The new code is contained in modules "src/curvature" (code generation
-approach from symbolic expressions by SymPy) and "src/stanmath" (code
-differentiation approach).
+The new code is contained in PLUMED submodules (directories)
+"src/curvature" (code generation approach from symbolic expressions by
+SymPy) and "src/stanmath" (code differentiation approach). The modules
+can be enabled or disabled independently. Example files with
+regression tests are provided in the directories "regtest/curvature"
+and "regtest/stanmath".  The rest of PLUMED 2 repository is unchanged.
 
-Example files with regression tests are provided in the directories
-(PLUMED submodules) "regtest/curvature" and "regtest/stanmath", which
-can be enabled or disabled independently.  The rest of PLUMED 2
-repository is unchanged. You may use the supplied C++ files as
-templates to implement your own CVs.
+You may use the supplied C++ files as templates to implement your own
+CVs.
 
 (Note: if you are using GIT, the Stan Math library,
 http://mc-stan.org/users/interfaces/math, is referenced as a
