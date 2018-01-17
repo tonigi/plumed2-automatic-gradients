@@ -12,7 +12,8 @@
 !/config
 !/core
 !/crystallization
-!/curvature
+!/curvature-autodiff
+!/curvature-codegen
 !/function
 !/generic
 !/gridtools
@@ -28,7 +29,6 @@
 !/reference
 !/secondarystructure
 !/setup
-!/stanmath
 !/tools
 !/vatom
 !/vesselbase
