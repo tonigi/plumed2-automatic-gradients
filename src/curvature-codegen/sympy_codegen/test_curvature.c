@@ -5,6 +5,7 @@
 
 const int MAX_CALLS=1e7;
 
+// Call radius and grad repeatedly
 void timeit() {
     double dt=2*M_PI/30;
     double r=2.5;
@@ -44,7 +45,7 @@ void timeit() {
 }
 
 
-
+// Three tests: R, dR, R(known coordinates)
 void test1() {
 
     double dt=2*M_PI/30;
