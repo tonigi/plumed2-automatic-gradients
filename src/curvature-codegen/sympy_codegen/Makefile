@@ -20,4 +20,9 @@ test_curvature_cse: test_curvature.o curvature_codegen_cse.o
 	$(CC) $(LOADLIBES) -o $@ $^
 
 
+results: default
+	-rm *.results
+	for i in `seq 10`; do perf stat -o plain.results --append -e r538010 -e r531010 -e r530211 ./test_curvature_plain; done 
+	for i in `seq 10`; do perf stat -o cse.results --append   -e r538010 -e r531010 -e r530211 ./test_curvature_cse; done 
+	
 

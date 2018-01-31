@@ -27,18 +27,16 @@ void timeit() {
         junk+=curvature_radius(a[0],a[1],a[2],
 			       b[0],b[1],b[2],
 			       c[0],c[1],c[2]);
-
         curvature_radius_grad(a[0],a[1],a[2],
 			      b[0],b[1],b[2],
 			      c[0],c[1],c[2],
 			      ga, gb, gc);
         junk+=ga[0];
-
     }
 
     t=clock()-t;
 
-    printf ("It took me %f seconds (%f μs/call) \n %f.\n",
+    printf ("It took me %f seconds (%f μs/call) \n %lf.\n",
             ((float)t)/CLOCKS_PER_SEC,
             1.0e6*((float)t)/CLOCKS_PER_SEC/MAX_CALLS,junk);
 
@@ -111,6 +109,6 @@ void test1() {
 
 
 int main(int argc, char**argv) {
-    test1();
+//    test1();
     timeit();
 }
