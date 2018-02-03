@@ -34,10 +34,17 @@ class GridVessel : public vesselbase::AveragingVessel {
   friend class ActionWithInputGrid;
   friend class DumpGrid;
 private:
+/// The way that grid points are constructed
+  enum {flat,fibonacci} gtype;
 /// Have the minimum and maximum for the grid been set
   bool bounds_set;
 /// The number of points in the grid
   unsigned npoints;
+/// Stuff for fibonacci grids
+  double root5, golden, igolden, log_golden2;
+/// Fib increment here is equal to 2*pi*(INVERSE GOLDEN RATIO)
+  double fib_offset, fib_increment, fib_shift;
+  std::vector<std::vector<unsigned> > fib_nlist;
 /// Units for Gaussian Cube file
   double cube_units;
 /// This flag is used to check if the user has created a valid input
@@ -50,7 +57,13 @@ private:
   std::vector<unsigned> nbin;
 /// The grid point that was requested last by getGridPointCoordinates
   unsigned currentGridPoint;
+/// The forces that will be output at the end of the calculation
+  std::vector<double> finalForces;
 protected:
+/// Is forced
+  bool wasforced;
+/// Forces acting on grid elements
+  std::vector<double> forces;
 /// Do we have derivatives
   bool noderiv;
 /// The names of the various columns in the grid file
@@ -70,6 +83,12 @@ protected:
   std::vector<bool> active;
 /// Convert a point in space the the correspoinding grid point
   unsigned getIndex( const std::vector<double>& p ) const ;
+/// Get the index of the closest point on the fibonacci sphere
+  unsigned getFibonacciIndex( const std::vector<double>& p ) const ;
+/// Get the flat grid coordinates
+  void getFlatGridCoordinates( const unsigned& ipoint, std::vector<unsigned>& tindices, std::vector<double>& x ) const ;
+/// Get the coordinates on the Fibonacci grid
+  void getFibonacciCoordinates( const unsigned& ipoint, std::vector<double>& x ) const ;
 public:
 /// keywords
   static void registerKeywords( Keywords& keys );
@@ -77,8 +96,14 @@ public:
   explicit GridVessel( const vesselbase::VesselOptions& );
 /// Remove the derivatives
   void setNoDerivatives();
+/// Get the type of grid we are using
+  std::string getType() const ;
 /// Set the minimum and maximum of the grid
   virtual void setBounds( const std::vector<std::string>& smin, const std::vector<std::string>& smax, const std::vector<unsigned>& nbins, const std::vector<double>& spacing );
+/// Get the cutoff to use for the Fibonacci spheres
+  virtual double getFibonacciCutoff() const ;
+/// Setup the grid if it is a fibonacci grid on the surface of a sphere
+  void setupFibonacciGrid( const unsigned& np );
 /// Get a description of the grid to output to the log
   std::string description();
 /// Convert an index into indices
@@ -102,6 +127,7 @@ public:
   unsigned getNumberOfPoints() const;
 /// Get the coordinates for a point in the grid
   void getGridPointCoordinates( const unsigned&, std::vector<double>& ) const ;
+  void getGridPointCoordinates( const unsigned&, std::vector<unsigned>&, std::vector<double>& ) const ;
 /// Get the dimensionality of the function
   unsigned getDimension() const ;
 /// Get the number of components in the vector stored on each grid point
@@ -140,6 +166,8 @@ public:
   double getGridExtent( const unsigned& i ) const ;
 /// Copy data from the action into the grid
   virtual void calculate( const unsigned& current, MultiValue& myvals, std::vector<double>& buffer, std::vector<unsigned>& der_list ) const ;
+/// Finish the calculation
+  virtual void finish( const std::vector<double>& buffer );
 /// This ensures that Gaussian cube fies are in correct units
   void setCubeUnits( const double& units );
 /// This ensures that Gaussian cube files are in correct units
@@ -154,6 +182,14 @@ public:
   void activateThesePoints( const std::vector<bool>& to_activate );
 /// Is this point active
   bool inactive( const unsigned& ip ) const ;
+/// This retrieves the final force
+  virtual void getFinalForces( const std::vector<double>& buffer, std::vector<double>& finalForces ) { plumed_error(); }
+/// Apply the forces
+  void setForce( const std::vector<double>& inforces );
+/// Was a force added to the grid
+  bool wasForced() const ;
+/// And retrieve the forces
+  bool applyForce( std::vector<double>& fforces );
 };
 
 inline
@@ -168,13 +204,19 @@ unsigned GridVessel::getNumberOfPoints() const {
 
 inline
 const std::vector<double>& GridVessel::getGridSpacing() const {
+  if( gtype==flat ) return dx;
+  plumed_merror("dont understand what spacing means for spherical grids");
   return dx;
 }
 
 inline
 double GridVessel::getCellVolume() const {
-  double myvol=1.0; for(unsigned i=0; i<dimension; ++i) myvol *= dx[i];
-  return myvol;
+  if( gtype==flat ) {
+    double myvol=1.0; for(unsigned i=0; i<dimension; ++i) myvol *= dx[i];
+    return myvol;
+  } else {
+    return 4*pi / static_cast<double>( getNumberOfPoints() );
+  }
 }
 
 inline
@@ -184,6 +226,7 @@ unsigned GridVessel::getDimension() const {
 
 inline
 bool GridVessel::isPeriodic( const unsigned& i ) const {
+  plumed_dbg_assert( gtype==flat );
   return pbc[i];
 }
 
@@ -200,6 +243,7 @@ unsigned GridVessel::getNumberOfComponents() const {
 
 inline
 double GridVessel::getGridExtent( const unsigned& i ) const {
+  plumed_dbg_assert( gtype==flat );
   return max[i] - min[i];
 }
 
@@ -216,12 +260,25 @@ bool GridVessel::inactive( const unsigned& ip ) const {
 
 inline
 const std::vector<unsigned>& GridVessel::getStride() const {
+  plumed_dbg_assert( gtype==flat );
   return stride;
 }
 
 inline
 unsigned GridVessel::getNumberOfBufferPoints() const {
   return npoints;
+}
+
+inline
+std::string GridVessel::getType() const {
+  if( gtype==flat ) return "flat";
+  else if( gtype==fibonacci ) return "fibonacci";
+  plumed_error();
+}
+
+inline
+double GridVessel::getFibonacciCutoff() const {
+  return 0.0;
 }
 
 }

@@ -14,11 +14,15 @@
 !/crystallization
 !/curvature-autodiff
 !/curvature-codegen
+!/drr
+!/eds
 !/function
 !/generic
 !/gridtools
 !/imd
+!/isdb
 !/lapack
+!/lepton
 !/lib
 !/main
 !/maketools
@@ -31,11 +35,13 @@
 !/setup
 !/tools
 !/vatom
+!/ves
 !/vesselbase
 !/wrapper
 !/header.sh
 !/release.sh
 !/astyle.sh
+
 
 # And just ignore these files
 *.xxd

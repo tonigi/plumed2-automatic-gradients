@@ -37,12 +37,12 @@ Can be used while debugging or optimizing plumed.
 
 \par Examples
 
-\verbatim
+\plumedfile
 # print detailed (action-by-action) timers at the end of simulation
 DEBUG DETAILED_TIMERS
 # dump every two steps which are the atoms required from the MD code
 DEBUG logRequestedAtoms STRIDE=2
-\endverbatim
+\endplumedfile
 
 */
 //+ENDPLUMEDOC
@@ -108,15 +108,15 @@ void Debug::apply() {
   if(logActivity) {
     const ActionSet&actionSet(plumed.getActionSet());
     int a=0;
-    for(ActionSet::const_iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-      if(dynamic_cast<Debug*>(*p))continue;
-      if((*p)->isActive()) a++;
+    for(const auto & p : actionSet) {
+      if(dynamic_cast<Debug*>(p))continue;
+      if(p->isActive()) a++;
     };
     if(a>0) {
       ofile.printf("activity at step %i: ",getStep());
-      for(ActionSet::const_iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-        if(dynamic_cast<Debug*>(*p))continue;
-        if((*p)->isActive()) ofile.printf("+");
+      for(const auto & p : actionSet) {
+        if(dynamic_cast<Debug*>(p))continue;
+        if(p->isActive()) ofile.printf("+");
         else                 ofile.printf("-");
       };
       ofile.printf("\n");

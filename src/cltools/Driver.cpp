@@ -123,11 +123,11 @@ file `plumed.dat`. For instance consider the command:
 plumed driver --plumed plumed.dat --ixyz trajectory.xyz --length-units A
 \endverbatim
 where `plumed.dat` is
-\verbatim
+\plumedfile
 # no explicit UNITS action here
 d: DISTANCE ATOMS=1,2
 PRINT ARG=d FILE=colvar
-\endverbatim
+\endplumedfile
 In this case, the driver reads the `xyz` file assuming it to contain coordinates in Angstrom units.
 However, the resulting `colvar` file contains a distance expressed in nm.
 
@@ -183,8 +183,7 @@ static vector<molfile_plugin_t *> plugins;
 static map <string, unsigned> pluginmap;
 static int register_cb(void *v, vmdplugin_t *p) {
   //const char *key = p->name;
-  std::pair<std::map<string,unsigned>::iterator,bool> ret;
-  ret = pluginmap.insert ( std::pair<string,unsigned>(string(p->name),plugins.size()) );
+  const auto ret = pluginmap.insert ( std::pair<string,unsigned>(string(p->name),plugins.size()) );
   if (ret.second==false) {
     //cerr<<"MOLFILE: found duplicate plugin for "<<key<<" : not inserted "<<endl;
   } else {
@@ -230,6 +229,7 @@ void Driver<real>::registerKeywords( Keywords& keys ) {
   keys.add("optional","--length-units","units for length, either as a string or a number");
   keys.add("optional","--mass-units","units for mass in pdb and mc file, either as a string or a number");
   keys.add("optional","--charge-units","units for charge in pdb and mc file, either as a string or a number");
+  keys.add("optional","--kt","set kBT, it will not be necessary to specify temperature in input file");
   keys.add("optional","--dump-forces","dump the forces on a file");
   keys.add("optional","--dump-forces-fmt","( default=%%f ) the format to use to dump the forces");
   keys.addFlag("--dump-full-virial",false,"with --dump-forces, it dumps the 9 components of the virial");
@@ -237,6 +237,7 @@ void Driver<real>::registerKeywords( Keywords& keys ) {
   keys.add("optional","--mc","provides a file with masses and charges as produced with DUMPMASSCHARGE");
   keys.add("optional","--box","comma-separated box dimensions (3 for orthorombic, 9 for generic)");
   keys.add("optional","--natoms","provides number of atoms - only used if file format does not contain number of atoms");
+  keys.add("optional","--initial-step","provides a number for the initial step, default is 0");
   keys.add("optional","--debug-forces","output a file containing the forces due to the bias evaluated using numerical derivatives "
            "and using the analytical derivatives implemented in plumed");
   keys.add("hidden","--debug-float","turns on the single precision version (to check float interface)");
@@ -351,6 +352,8 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
   if( debugforces!="" && (debug_dd || debug_pd) ) error("cannot debug forces and domain/particle decomposition at same time");
   if( debugforces!="" && sizeof(real)!=sizeof(double) ) error("cannot debug forces in single precision mode");
 
+  real kt=-1.0;
+  parse("--kt",kt);
   string trajectory_fmt;
 
   bool use_molfile=false;
@@ -458,7 +461,8 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
 
   }
 
-  if( debug_dd && debug_pd ) error("cannot use debug-dd and debug-pd at the same time");
+
+  if(debug_dd && debug_pd) error("cannot use debug-dd and debug-pd at the same time");
   if(debug_pd || debug_dd) {
     if( !Communicator::initialized() ) error("needs mpi for debug-pd");
   }
@@ -468,6 +472,8 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
   p.cmd("setRealPrecision",&rr);
   int checknatoms=-1;
   long int step=0;
+  parse("--initial-step",step);
+
   if(Communicator::initialized()) {
     if(multi) {
       if(intracomm.Get_rank()==0) p.cmd("GREX setMPIIntercomm",&intercomm.Get_comm());
@@ -484,13 +490,6 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
   p.cmd("setPlumedDat",plumedFile.c_str());
   p.cmd("setLog",out);
 
-  if(multi) {
-    string n;
-    Tools::convert(intercomm.Get_rank(),n);
-    trajectoryFile=FileBase::appendSuffix(trajectoryFile,"."+n);
-  }
-
-
   int natoms;
 
   FILE* fp=NULL; FILE* fp_forces=NULL; OFile fp_dforces;
@@ -501,6 +500,13 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
     if (trajectoryFile=="-")
       fp=in;
     else {
+      if(multi) {
+        string n;
+        Tools::convert(intercomm.Get_rank(),n);
+        std::string testfile=FileBase::appendSuffix(trajectoryFile,"."+n);
+        FILE* tmp_fp=fopen(testfile.c_str(),"r");
+        if(tmp_fp) { fclose(tmp_fp); trajectoryFile=testfile.c_str();}
+      }
       if(use_molfile==true) {
 #ifdef __PLUMED_HAS_MOLFILE_PLUGINS
         h_in = api->open_file_read(trajectoryFile.c_str(), trajectory_fmt.c_str(), &natoms);
@@ -628,6 +634,9 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
       natoms=0;
     }
     if( checknatoms<0 ) {
+      if(kt>=0) {
+        p.cmd("setKbT",&kt);
+      }
       checknatoms=natoms;
       p.cmd("setNatoms",&natoms);
       p.cmd("init");
@@ -688,7 +697,7 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
           }
         }
         if(intracomm.Get_rank()==0) {
-          fprintf(out,"\nDRIVER: Reassigning particle decomposition\n");
+          fprintf(out,"\nDRIVER: Reassigning domain decomposition\n");
         }
         p.cmd("setAtomsNlocal",&dd_nlocal);
         p.cmd("setAtomsGatindex",&dd_gatindex[0]);
@@ -738,7 +747,7 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
         matrix box;
         rvec* pos=new rvec[natoms];
         float prec,lambda;
-        int ret;
+        int ret=exdrOK;
         if(trajectory_fmt=="xdr-xtc") ret=read_xtc(xd,natoms,&localstep,&time,box,pos,&prec);
         if(trajectory_fmt=="xdr-trr") ret=read_trr(xd,natoms,&localstep,&time,&lambda,box,pos,NULL,NULL);
         if(stride==0) step=localstep;
@@ -838,10 +847,14 @@ int Driver<real>::main(FILE* in,FILE*out,Communicator& pc) {
         p.cmd("setMasses",&dd_masses[0]);
         p.cmd("setCharges",&dd_charges[0]);
       } else {
-        p.cmd("setForces",&forces[3*pd_start]);
-        p.cmd("setPositions",&coordinates[3*pd_start]);
-        p.cmd("setMasses",&masses[pd_start]);
-        p.cmd("setCharges",&charges[pd_start]);
+// this is required to avoid troubles when the last domain
+// contains zero atoms
+// Basically, for empty domains we pass null pointers
+#define fix_pd(xx) (pd_nlocal!=0?&xx:NULL)
+        p.cmd("setForces",fix_pd(forces[3*pd_start]));
+        p.cmd("setPositions",fix_pd(coordinates[3*pd_start]));
+        p.cmd("setMasses",fix_pd(masses[pd_start]));
+        p.cmd("setCharges",fix_pd(charges[pd_start]));
       }
       p.cmd("setBox",&cell[0]);
       p.cmd("setVirial",&virial[0]);

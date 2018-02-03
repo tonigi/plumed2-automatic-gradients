@@ -8,6 +8,8 @@
 !/analysis
 !/basic
 !/crystallization
+!/eds
+!/drr
 !/mapping
 !/multicolvar
 !/secondarystructure
@@ -18,6 +20,8 @@
 !/metainference
 !/curvature-codegen
 !/curvature-autodiff
+!/isdb
+!/ves
 # These files we just want to ignore completely
 tmp
 report.txt

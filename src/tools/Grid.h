@@ -127,6 +127,8 @@ public:
   unsigned getDimension() const;
 /// get argument names  of this grid
   std::vector<std::string> getArgNames() const;
+/// get if the grid has derivatives
+  bool hasDerivatives() const {return usederiv_;}
 
 /// methods to handle grid indices
   std::vector<unsigned> getIndices(index_t index) const;
@@ -145,6 +147,9 @@ public:
   std::vector<index_t> getNeighbors(index_t index,const std::vector<unsigned> & neigh) const;
   std::vector<index_t> getNeighbors(const std::vector<unsigned> & indices,const std::vector<unsigned> & neigh) const;
   std::vector<index_t> getNeighbors(const std::vector<double> & x,const std::vector<unsigned> & neigh) const;
+/// get nearest neighbors (those separated by exactly one lattice unit)
+  std::vector<index_t> getNearestNeighbors(const index_t index) const;
+  std::vector<index_t> getNearestNeighbors(const std::vector<unsigned> &indices) const;
 
 /// write header for grid file
   void writeHeader(OFile& file);
@@ -210,10 +215,15 @@ public:
   void projectOnLowDimension(double &val, std::vector<int> &varHigh, WeightBase* ptr2obj );
 /// set output format
   void setOutputFmt(const std::string & ss) {fmt_=ss;}
+/// reset output format to the default %14.9f format
+  void resetToDefaultOutputFmt() {fmt_="%14.9f";}
 /// Integrate the function calculated on the grid
   double integrate( std::vector<unsigned>& npoints );
 ///
   void mpiSumValuesAndDerivatives( Communicator& comm );
+/// Find the maximum over paths of the minimum value of the gridded function along the paths
+/// for all paths of neighboring grid lattice points from a source point to a sink point.
+  virtual double findMaximalPathMinimum(const std::vector<double> &source, const std::vector<double> &sink);
 };
 
 
@@ -221,9 +231,7 @@ class SparseGrid : public Grid
 {
 
   std::map<index_t,double> map_;
-  typedef std::map<index_t,double>::const_iterator iterator;
   std::map< index_t,std::vector<double> > der_;
-  typedef std::map<index_t,std::vector<double> >::const_iterator iterator_der;
 
 protected:
   void clear();

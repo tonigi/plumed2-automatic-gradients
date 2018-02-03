@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2017 The plumed team
+   Copyright (c) 2015-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -44,6 +44,7 @@ public:
   virtual void prepareForAveraging();
   virtual bool checkAllActive() const { return true; }
   virtual void performOperations( const bool& from_update );
+  virtual void apply() {};
 };
 
 inline

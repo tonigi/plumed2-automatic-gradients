@@ -23,12 +23,30 @@
 #include "AtomNumber.h"
 #include "Exception.h"
 #include "IFile.h"
+#include "lepton/Lepton.h"
 #include <cstring>
 #include <dirent.h>
 #include <iostream>
+#include <map>
 
 using namespace std;
 namespace PLMD {
+
+static std::map<string, double> leptonConstants= {
+  {"e", std::exp(1.0)},
+  {"log2e", 1.0/std::log(2.0)},
+  {"log10e", 1.0/std::log(10.0)},
+  {"ln2", std::log(2.0)},
+  {"ln10", std::log(10.0)},
+  {"pi", pi},
+  {"pi_2", pi*0.5},
+  {"pi_4", pi*0.25},
+//  {"1_pi", 1.0/pi},
+//  {"2_pi", 2.0/pi},
+//  {"2_sqrtpi", 2.0/std::sqrt(pi)},
+  {"sqrt2", std::sqrt(2.0)},
+  {"sqrt1_2", std::sqrt(0.5)}
+};
 
 template<class T>
 bool Tools::convertToAny(const string & str,T & t) {
@@ -61,11 +79,18 @@ bool Tools::convert(const string & str,AtomNumber &a) {
 
 template<class T>
 bool Tools::convertToReal(const string & str,T & t) {
+  if(convertToAny(str,t)) return true;
   if(str=="PI" || str=="+PI" || str=="+pi" || str=="pi") {
     t=pi; return true;
   } else if(str=="-PI" || str=="-pi") {
     t=-pi; return true;
-  } else if( str.find("PI")!=std::string::npos ) {
+  }
+  try {
+    t=lepton::Parser::parse(str).evaluate(leptonConstants);
+    return true;
+  } catch(PLMD::lepton::Exception& exc) {
+  }
+  if( str.find("PI")!=std::string::npos ) {
     std::size_t pi_start=str.find_first_of("PI");
     if(str.substr(pi_start)!="PI") return false;
     istringstream nstr(str.substr(0,pi_start));
@@ -87,7 +112,7 @@ bool Tools::convertToReal(const string & str,T & t) {
     t=NAN;
     return true;
   }
-  return convertToAny(str,t);
+  return false;
 }
 
 bool Tools::convert(const string & str,float & t) {
@@ -164,7 +189,7 @@ bool Tools::getParsedLine(IFile& ifile,vector<string> & words) {
     if(!w.empty()) {
       if(inside && *(w.begin())=="...") {
         inside=false;
-        if(w.size()==2) plumed_massert(w[1]==words[0],"second word in terminating \"...\" lines, if present, should be equal to first word of directive");
+        if(w.size()==2) plumed_massert(w[1]==words[0],"second word in terminating \"...\" "+w[1]+" line, if present, should be equal to first word of directive: "+words[0]);
         plumed_massert(w.size()<=2,"terminating \"...\" lines cannot consist of more than two words");
         w.clear();
       } else if(*(w.end()-1)=="...") {
@@ -213,9 +238,9 @@ void Tools::trimComments(string & s) {
   s=s.substr(0,n);
 }
 
-bool Tools::getKey(vector<string>& line,const string & key,string & s) {
+bool Tools::getKey(vector<string>& line,const string & key,string & s,int rep) {
   s.clear();
-  for(vector<string>::iterator p=line.begin(); p!=line.end(); ++p) {
+  for(auto p=line.begin(); p!=line.end(); ++p) {
     if((*p).length()==0) continue;
     string x=(*p).substr(0,key.length());
     if(x==key) {
@@ -223,6 +248,13 @@ bool Tools::getKey(vector<string>& line,const string & key,string & s) {
       string tmp=(*p).substr(key.length(),(*p).length());
       line.erase(p);
       s=tmp;
+      const std::string multi("@replicas:");
+      if(rep>=0 && startWith(s,multi)) {
+        s=s.substr(multi.length(),s.length());
+        std::vector<std::string> words=getWords(s,"\t\n ,");
+        plumed_massert(rep<static_cast<int>(words.size()),"Number of fields in " + s + " not consistent with number of replicas");
+        s=words[rep];
+      }
       return true;
     }
   };
@@ -231,31 +263,31 @@ bool Tools::getKey(vector<string>& line,const string & key,string & s) {
 
 void Tools::interpretRanges(std::vector<std::string>&s) {
   vector<string> news;
-  for(vector<string>::iterator p=s.begin(); p!=s.end(); ++p) {
-    news.push_back(*p);
-    size_t dash=p->find("-");
+  for(const auto & p :s) {
+    news.push_back(p);
+    size_t dash=p.find("-");
     if(dash==string::npos) continue;
     int first;
-    if(!Tools::convert(p->substr(0,dash),first)) continue;
+    if(!Tools::convert(p.substr(0,dash),first)) continue;
     int stride=1;
     int second;
-    size_t colon=p->substr(dash+1).find(":");
+    size_t colon=p.substr(dash+1).find(":");
     if(colon!=string::npos) {
-      if(!Tools::convert(p->substr(dash+1).substr(0,colon),second) ||
-          !Tools::convert(p->substr(dash+1).substr(colon+1),stride)) continue;
+      if(!Tools::convert(p.substr(dash+1).substr(0,colon),second) ||
+          !Tools::convert(p.substr(dash+1).substr(colon+1),stride)) continue;
     } else {
-      if(!Tools::convert(p->substr(dash+1),second)) continue;
+      if(!Tools::convert(p.substr(dash+1),second)) continue;
     }
     news.resize(news.size()-1);
     if(first<=second) {
-      plumed_massert(stride>0,"interpreting ranges "+ *p + ", stride should be positive");
+      plumed_massert(stride>0,"interpreting ranges "+ p + ", stride should be positive");
       for(int i=first; i<=second; i+=stride) {
         string ss;
         convert(i,ss);
         news.push_back(ss);
       }
     } else {
-      plumed_massert(stride<0,"interpreting ranges "+ *p + ", stride should be positive");
+      plumed_massert(stride<0,"interpreting ranges "+ p + ", stride should be positive");
       for(int i=first; i>=second; i+=stride) {
         string ss;
         convert(i,ss);
@@ -329,8 +361,8 @@ bool Tools::startWith(const std::string & full,const std::string &start) {
 
 bool Tools::findKeyword(const std::vector<std::string>&line,const std::string&key) {
   const std::string search(key+"=");
-  for(vector<string>::const_iterator p=line.begin(); p!=line.end(); ++p) {
-    if(startWith(*p,search)) return true;
+  for(const auto & p : line) {
+    if(startWith(p,search)) return true;
   }
   return false;
 }

@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2017 The plumed team
+   Copyright (c) 2014-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -36,14 +36,14 @@ Calculates the replica averaging of a collective variable over multiple replicas
 Each collective variable is averaged separately and stored in a component labelled <em>label</em>.cvlabel.
 
 \par Examples
+
 The following input tells plumed to calculate the distance between atoms 3 and 5
 and the average it over the available replicas.
-\verbatim
+\plumedfile
 dist: DISTANCE ATOMS=3,5
 ens: ENSEMBLE ARG=dist
 PRINT ARG=dist,ens.dist
-\endverbatim
-(See also \ref PRINT and \ref DISTANCE).
+\endplumedfile
 
 */
 //+ENDPLUMEDOC

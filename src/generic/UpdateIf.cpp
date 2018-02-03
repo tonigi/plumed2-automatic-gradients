@@ -60,9 +60,10 @@ particular sense. For example, conditionally updating a \ref METAD keyword
 can lead to unexpected results.
 
 \par Examples
+
 The following input instructs plumed dump all the snapshots where an atom is in touch with
 the solute.
-\verbatim
+\plumedfile
 solute: GROUP ATOMS=1-124
 coord: COORDINATION GROUPA=solute GROUPB=500 R_0=0.5
 
@@ -72,8 +73,7 @@ coord: COORDINATION GROUPA=solute GROUPB=500 R_0=0.5
 UPDATE_IF ARG=coord MORE_THAN=0.5
 DUMPATOMS ATOMS=solute,500 FILE=output.xyz
 UPDATE_IF ARG=coord END
-\endverbatim
-(See also \ref GROUP, \ref COORDINATION, and \ref DUMPATOMS)
+\endplumedfile
 
 */
 //+ENDPLUMEDOC

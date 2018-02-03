@@ -20,30 +20,30 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "PlumedMain.h"
-#include "tools/Tools.h"
-#include "tools/OpenMP.h"
-#include <cstring>
-#include "ActionPilot.h"
-#include "ActionWithValue.h"
 #include "ActionAtomistic.h"
+#include "ActionPilot.h"
+#include "ActionRegister.h"
+#include "ActionSet.h"
+#include "ActionWithValue.h"
 #include "ActionWithVirtualAtom.h"
 #include "Atoms.h"
-#include <set>
-#include "config/Config.h"
-#include <cstdlib>
-#include "ActionRegister.h"
-#include "GREX.h"
-#include "tools/Exception.h"
-#include "Atoms.h"
-#include "ActionSet.h"
-#include "tools/Log.h"
-#include "tools/DLLoader.h"
-#include "tools/Communicator.h"
 #include "CLToolMain.h"
-#include "tools/Stopwatch.h"
-#include "tools/Citations.h"
 #include "ExchangePatterns.h"
+#include "GREX.h"
+#include "config/Config.h"
+#include "tools/Citations.h"
+#include "tools/Communicator.h"
+#include "tools/DLLoader.h"
+#include "tools/Exception.h"
 #include "tools/IFile.h"
+#include "tools/Log.h"
+#include "tools/OpenMP.h"
+#include "tools/Tools.h"
+#include "tools/Stopwatch.h"
+#include <cstdlib>
+#include <cstring>
+#include <set>
+#include <unordered_map>
 
 using namespace std;
 
@@ -51,8 +51,8 @@ using namespace std;
 
 namespace PLMD {
 
-std::map<std::string, int> & plumedMainWordMap() {
-  static std::map<std::string, int> word_map;
+const std::unordered_map<std::string, int> & plumedMainWordMap() {
+  static std::unordered_map<std::string, int> word_map;
   static bool init=false;
   if(!init) {
 #include "PlumedMainMap.inc"
@@ -73,6 +73,7 @@ PlumedMain::PlumedMain():
   citations(*new Citations),
   step(0),
   active(false),
+  endPlumed(false),
   atoms(*new Atoms(*this)),
   actionSet(*new ActionSet(*this)),
   bias(0.0),
@@ -128,7 +129,7 @@ void PlumedMain::cmd(const std::string & word,void*val) {
   } else {
     int iword=-1;
     double d;
-    std::map<std::string, int>::const_iterator it=plumedMainWordMap().find(words[0]);
+    const auto it=plumedMainWordMap().find(words[0]);
     if(it!=plumedMainWordMap().end()) iword=it->second;
     switch(iword) {
     case cmd_setBox:
@@ -275,7 +276,7 @@ void PlumedMain::cmd(const std::string & word,void*val) {
       break;
     case cmd_getApiVersion:
       CHECK_NOTNULL(val,word);
-      *(static_cast<int*>(val))=4;
+      *(static_cast<int*>(val))=5;
       break;
     // commands which can be used only before initialization:
     case cmd_init:
@@ -512,7 +513,8 @@ void PlumedMain::readInputFile(std::string str) {
   ifile.open(str);
   ifile.allowNoEOL();
   std::vector<std::string> words;
-  while(Tools::getParsedLine(ifile,words) && words[0]!="ENDPLUMED") readInputWords(words);
+  while(Tools::getParsedLine(ifile,words) && !endPlumed) readInputWords(words);
+  endPlumed=false;
   log.printf("END FILE: %s\n",str.c_str());
   log.flush();
 
@@ -535,7 +537,6 @@ void PlumedMain::readInputLine(const std::string & str) {
 void PlumedMain::readInputWords(const std::vector<std::string> & words) {
   plumed_assert(initialized);
   if(words.empty())return;
-  else if(words[0]=="ENDPLUMED") return;
   else if(words[0]=="_SET_SUFFIX") {
     plumed_assert(words.size()==2);
     setSuffix(words[1]);
@@ -544,11 +545,13 @@ void PlumedMain::readInputWords(const std::vector<std::string> & words) {
     Tools::interpretLabel(interpreted);
     Action* action=actionRegister().create(ActionOptions(*this,interpreted));
     if(!action) {
-      log<<"ERROR\n";
-      log<<"I cannot understand line:";
-      for(unsigned i=0; i<interpreted.size(); ++i) log<<" "<<interpreted[i];
-      log<<"\n";
-      exit(1);
+      std::string msg;
+      msg ="ERROR\nI cannot understand line:";
+      for(unsigned i=0; i<interpreted.size(); ++i) msg+=" "+interpreted[i];
+      msg+="\nMaybe a missing space or a typo?";
+      log << msg;
+      log.flush();
+      plumed_merror(msg);
     };
     action->checkRead();
     actionSet.push_back(action);
@@ -592,10 +595,8 @@ void PlumedMain::prepareDependencies() {
 // which can be dynamically changed).
 
 // First switch off all actions
-  for(ActionSet::iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-    (*p)->deactivate();
-    //I think this is already done inside deactivate
-    //(*p)->clearOptions();
+  for(const auto & p : actionSet) {
+    p->deactivate();
   }
 
 // for optimization, an "active" flag remains false if no action at all is active
@@ -608,9 +609,9 @@ void PlumedMain::prepareDependencies() {
   };
 
 // also, if one of them is the total energy, tell to atoms that energy should be collected
-  for(ActionSet::iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-    if((*p)->isActive()) {
-      if((*p)->checkNeedsGradients()) (*p)->setOption("GRADIENTS");
+  for(const auto & p : actionSet) {
+    if(p->isActive()) {
+      if(p->checkNeedsGradients()) p->setOption("GRADIENTS");
     }
   }
 
@@ -653,16 +654,16 @@ void PlumedMain::justCalculate() {
 
   int iaction=0;
 // calculate the active actions in order (assuming *backward* dependence)
-  for(ActionSet::iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-    if((*p)->isActive()) {
+  for(const auto & p : actionSet) {
+    if(p->isActive()) {
       std::string actionNumberLabel;
       if(detailedTimers) {
         Tools::convert(iaction,actionNumberLabel);
-        actionNumberLabel="4A "+actionNumberLabel+" "+(*p)->getLabel();
+        actionNumberLabel="4A "+actionNumberLabel+" "+p->getLabel();
         stopwatch.start(actionNumberLabel);
       }
-      ActionWithValue*av=dynamic_cast<ActionWithValue*>(*p);
-      ActionAtomistic*aa=dynamic_cast<ActionAtomistic*>(*p);
+      ActionWithValue*av=dynamic_cast<ActionWithValue*>(p);
+      ActionAtomistic*aa=dynamic_cast<ActionAtomistic*>(p);
       {
         if(av) av->clearInputForces();
         if(av) av->clearDerivatives();
@@ -671,13 +672,13 @@ void PlumedMain::justCalculate() {
         if(aa) aa->clearOutputForces();
         if(aa) if(aa->isActive()) aa->retrieveAtoms();
       }
-      if((*p)->checkNumericalDerivatives()) (*p)->calculateNumericalDerivatives();
-      else (*p)->calculate();
+      if(p->checkNumericalDerivatives()) p->calculateNumericalDerivatives();
+      else p->calculate();
       // This retrieves components called bias
       if(av) bias+=av->getOutputQuantity("bias");
       if(av) work+=av->getOutputQuantity("work");
       if(av)av->setGradientsIfNeeded();
-      ActionWithVirtualAtom*avv=dynamic_cast<ActionWithVirtualAtom*>(*p);
+      ActionWithVirtualAtom*avv=dynamic_cast<ActionWithVirtualAtom*>(p);
       if(avv)avv->setGradientsIfNeeded();
       if(detailedTimers) stopwatch.stop(actionNumberLabel);
     }
@@ -696,18 +697,19 @@ void PlumedMain::backwardPropagate() {
   int iaction=0;
   stopwatch.start("5 Applying (backward loop)");
 // apply them in reverse order
-  for(ActionSet::reverse_iterator p=actionSet.rbegin(); p!=actionSet.rend(); ++p) {
-    if((*p)->isActive()) {
+  for(auto pp=actionSet.rbegin(); pp!=actionSet.rend(); ++pp) {
+    const auto & p(*pp);
+    if(p->isActive()) {
 
       std::string actionNumberLabel;
       if(detailedTimers) {
         Tools::convert(iaction,actionNumberLabel);
-        actionNumberLabel="5A "+actionNumberLabel+" "+(*p)->getLabel();
+        actionNumberLabel="5A "+actionNumberLabel+" "+p->getLabel();
         stopwatch.start(actionNumberLabel);
       }
 
-      (*p)->apply();
-      ActionAtomistic*a=dynamic_cast<ActionAtomistic*>(*p);
+      p->apply();
+      ActionAtomistic*a=dynamic_cast<ActionAtomistic*>(p);
 // still ActionAtomistic has a special treatment, since they may need to add forces on atoms
       if(a) a->applyForces();
 
@@ -729,9 +731,9 @@ void PlumedMain::update() {
   stopwatch.start("6 Update");
 // update step (for statistics, etc)
   updateFlags.push(true);
-  for(ActionSet::iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-    (*p)->beforeUpdate();
-    if((*p)->isActive() && (*p)->checkUpdate() && updateFlagsTop()) (*p)->update();
+  for(const auto & p : actionSet) {
+    p->beforeUpdate();
+    if(p->isActive() && p->checkUpdate() && updateFlagsTop()) p->update();
   }
   while(!updateFlags.empty()) updateFlags.pop();
   if(!updateFlags.empty()) plumed_merror("non matching changes in the update flags");
@@ -747,24 +749,24 @@ void PlumedMain::update() {
   if(step%10000==0||doCheckPoint) {
     fflush();
     log.flush();
-    for(ActionSet::const_iterator p=actionSet.begin(); p!=actionSet.end(); ++p) (*p)->fflush();
+    for(const auto & p : actionSet) p->fflush();
   }
   stopwatch.stop("6 Update");
 }
 
 void PlumedMain::load(const std::string& ss) {
   if(DLLoader::installed()) {
-    string s=ss;
+    std::string s=ss;
     size_t n=s.find_last_of(".");
-    string extension="";
-    string base=s;
+    std::string extension="";
+    std::string base=s;
     if(n!=std::string::npos && n<s.length()-1) extension=s.substr(n+1);
     if(n!=std::string::npos && n<s.length())   base=s.substr(0,n);
     if(extension=="cpp") {
 // full path command, including environment setup
 // this will work even if plumed is not in the execution path or if it has been
 // installed with a name different from "plumed"
-      string cmd=config::getEnvCommand()+" \""+config::getPlumedRoot()+"\"/scripts/mklib.sh "+s;
+      std::string cmd=config::getEnvCommand()+" \""+config::getPlumedRoot()+"\"/scripts/mklib.sh "+s;
       log<<"Executing: "<<cmd;
       if(comm.Get_size()>0) log<<" (only on master node)";
       log<<"\n";
@@ -775,11 +777,10 @@ void PlumedMain::load(const std::string& ss) {
     s=base+"."+config::getSoExt();
     void *p=dlloader.load(s);
     if(!p) {
+      const std::string error_msg="I cannot load library " + ss + " " + dlloader.error();
       log<<"ERROR\n";
-      log<<"I cannot load library "<<ss<<"\n";
-      log<<dlloader.error();
-      log<<"\n";
-      this->exit(1);
+      log<<error_msg<<"\n";
+      plumed_merror(error_msg);
     }
     log<<"Loading shared library "<<s.c_str()<<"\n";
     log<<"Here is the new list of available actions\n";
@@ -815,8 +816,8 @@ std::string PlumedMain::cite(const std::string&item) {
 }
 
 void PlumedMain::fflush() {
-  for(files_iterator p=files.begin(); p!=files.end(); ++p) {
-    (*p)->flush();
+  for(const auto  & p : files) {
+    p->flush();
   }
 }
 
@@ -833,8 +834,8 @@ void PlumedMain::stop() {
 }
 
 void PlumedMain::runJobsAtEndOfCalculation() {
-  for(ActionSet::iterator p=actionSet.begin(); p!=actionSet.end(); ++p) {
-    (*p)->runFinalJobs();
+  for(const auto & p : actionSet) {
+    p->runFinalJobs();
   }
 }
 

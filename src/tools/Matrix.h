@@ -327,7 +327,7 @@ template <typename T> int Invert( const Matrix<T>& A, Matrix<double>& inverse ) 
     if( inverse.cl!=A.cl || inverse.rw!=A.rw ) { inverse.resize(A.rw,A.cl); }
     k=0; for(unsigned i=0; i<A.rw; ++i) for(unsigned j=0; j<A.cl; ++j) inverse(j,i)=da[k++];
 
-    delete[] work; delete[] ipiv;
+    delete [] da; delete[] work; delete[] ipiv;
   }
 
   return 0;
@@ -339,10 +339,6 @@ template <typename T> void cholesky( const Matrix<T>& A, Matrix<T>& B ) {
   Matrix<T> L(A.rw,A.cl); L=0.;
   std::vector<T> D(A.rw,0.);
   for(unsigned i=0; i<A.rw; ++i) {
-// The following line triggers a warning in cppcheck,
-// perhaps because of the conversion of "1" to an unspecified type
-// I suppress it explicitly
-// cppcheck-suppress compareBoolExpressionWithInt
     L(i,i)=static_cast<T>( 1 );
     for (unsigned j=0; j<i; ++j) {
       L(i,j)=A(i,j);

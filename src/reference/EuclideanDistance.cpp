@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2017 The plumed team
+   Copyright (c) 2013-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -27,8 +27,6 @@ namespace PLMD {
 class EuclideanDistance : public ArgumentOnlyDistance {
 public:
   explicit EuclideanDistance( const ReferenceConfigurationOptions& ro );
-  bool pcaIsEnabledForThisReference() { return true; }
-  void setupPCAStorage( ReferenceValuePack& mypack ) { mypack.switchOnPCAOption(); }
 };
 
 PLUMED_REGISTER_METRIC(EuclideanDistance,"EUCLIDEAN")

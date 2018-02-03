@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2015-2017 The plumed team
+   Copyright (c) 2016,2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -52,9 +52,14 @@ GridPrintingBase::GridPrintingBase(const ActionOptions&ao):
   }
   if( !ingrid ) error("input action does not calculate a grid");
 
-  parse("FMT",fmt); parse("FILE",filename);
+  parse("FILE",filename);
   if(filename.length()==0) error("name out output file was not specified");
-  log.printf("  outputting grid calculated by action %s to file named %s with format %s \n",mves->getLabel().c_str(),filename.c_str(), fmt.c_str() );
+  log.printf("  outputting grid calculated by action %s to file named %s",mves->getLabel().c_str(), filename.c_str() );
+  if( keywords.exists("FMT") ) {
+    parse("FMT",fmt); log.printf(" with format %s \n", fmt.c_str() );
+  } else {
+    log.printf("\n");
+  }
 }
 
 void GridPrintingBase::update() {
