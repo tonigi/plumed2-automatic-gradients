@@ -19,11 +19,11 @@
    You should have received a copy of the GNU Lesser General Public License
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
-#include "multicolvar/MultiColvar.h"
+#include "multicolvar/MultiColvarBase.h"
+#include "multicolvar/AtomValuePack.h"
 #include "core/PlumedMain.h"
 #include "core/ActionRegister.h"
 #include "Wrapper.h"
-
 
 #include <string>
 #include <cmath>
@@ -88,7 +88,7 @@ PRINT ARG=d1.lessthan
 
 #define POLYMER "POLYMER"
 
-class Curvatures : public MultiColvar {
+class Curvatures : public MultiColvarBase {
 private:
   bool inverse;
   void readPolymerKeyword( std::vector<AtomNumber>& all_atoms );
@@ -104,10 +104,14 @@ public:
 PLUMED_REGISTER_ACTION(Curvatures,"CURVATURES")
 
 void Curvatures::registerKeywords( Keywords& keys ) {
-  MultiColvar::registerKeywords( keys );
+  MultiColvarBase::registerKeywords( keys );
   keys.add("atoms",POLYMER,"list the beads compounding the polymer");
   keys.addFlag("INVERSE",false,"return the inverse of the radius");
-  keys.use("ATOMS"); keys.use("ALT_MIN"); keys.use("LOWEST"); keys.use("HIGHEST");
+  keys.add("numbered","ATOMS","the atoms involved at each point where the curvature should be calculated");
+  keys.reset_style("ATOMS","atoms");
+
+  // keys.use("ATOMS");
+  keys.use("ALT_MIN"); keys.use("LOWEST"); keys.use("HIGHEST");
   keys.use("MEAN"); keys.use("MIN"); keys.use("MAX"); keys.use("LESS_THAN");
   keys.use("MORE_THAN"); keys.use("BETWEEN"); keys.use("HISTOGRAM"); keys.use("MOMENTS");
 }
@@ -147,7 +151,8 @@ void Curvatures::readPolymerKeyword( std::vector<AtomNumber>& all_atoms ) {
 
 
 Curvatures::Curvatures(const ActionOptions&ao):
-  PLUMED_MULTICOLVAR_INIT(ao),
+  Action(ao),
+  MultiColvarBase(ao),
   inverse(false)
 {
   // Read in the atoms
