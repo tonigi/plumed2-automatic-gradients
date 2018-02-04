@@ -161,7 +161,7 @@ inline void CurvatureAutoDiff::setDerivativesFromEigenMatrix(Eigen::Matrix<doubl
 
 void CurvatureAutoDiff::registerKeywords( Keywords& keys ) {
   Colvar::registerKeywords( keys );
-  keys.add("atoms","ATOMS","the list of three atoms around which to calculate the stanmathdemo");
+  keys.add("atoms","ATOMS","the list of three atoms around which to calculate the curvature");
   keys.addFlag("INVERSE",false,"return the inverse of the radius");
 }
 

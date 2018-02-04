@@ -1,126 +1,80 @@
-Branches and releases
----------------------
+Automatic Gradient Computation for Collective Variables in PLUMED 2
+========================================
 
-Several branches and tags are stored on the git repository.
+This repository contains example code from the paper "Automatic
+Gradient Computation for Collective Variables in PLUMED 2",
+illustrating two approaches to automatic gradient computation for
+collective variables in PLUMED.
 
-Branches named `v2.X` correspond to release branches.
+It is a fork of the PLUMED 2 repository (www.plumed.org) taken at
+release v2.4.0.
 
-Master branch may contain non tested features and is not expected to be used by non-developers.
-It typically contains features that will be available on the next release.
+The new code is contained in PLUMED submodules (directories)
+`src/curvature_codegen` (code generation approach from symbolic
+expressions by SymPy) and `src/curvature_autodiff` (code
+differentiation approach by the Stan Math library). You may use the
+supplied C++ files as templates to implement your own CVs. The modules
+can be enabled or disabled independently.
 
-Tags named `v2.XbY` correspond to beta releases, use it with care.
-Tags named `v2.X.Y` correspond to official releases, use the latest available.
+Example files with regression tests are provided in the directories
+"regtest/curvature_codegen" and "regtest/curvature_autodiff"
+respectively.  The rest of PLUMED 2 repository is unchanged.
 
-In addition, the repository contains a number of other branches related to specific features.
-Please contact the developers that are committing on those branches before basing your work
-there, since they might contain temporary work and might be rebased later.
-For instance, branch `testdoc` is setup so as to push a test copy of the manual
-and is often force pushed.
+To test, on most common machines the following instructions should get
+you started. After extracting the distribution:
 
-To report problems found on beta or official releases, use the normal
-[plumed-users@googlegroups.com](mailto:plumed-users@googlegroups.com)
-mailing list. Please state exactly which version you are using.
-To report problems found on `master` branch, use the
-[plumed2-git@googlegroups.com](plumed2-git@googlegroups.com) mailing list.
-This is also the correct place for discussions about new features etc.
-When reporting please provide the git hash (you can obtain it with `git rev-parse HEAD`).
+    ./configure 
+    make -j4
 
-Status
-------
+You can enable and disable the modules individually, as follows:
 
-Below you find the status on [Travis-CI](http://travis-ci.org/plumed/plumed2) for the release branches.
+    ./configure --enable-modules=+curvature_codegen:-curvature_autodiff
 
-| Branch   |      Status   | First stable release | Still supported |
-|:--------:|:-------------:|:--------:|:------:|
-| master   | [![Build Status](https://travis-ci.org/plumed/plumed2.svg?branch=master)](https://travis-ci.org/plumed/plumed2) | v2.5.0 is expected late 2018 | / |
-| v2.4     | [![Build Status](https://travis-ci.org/plumed/plumed2.svg?branch=v2.4)](https://travis-ci.org/plumed/plumed2)   | v2.4.0 is expected late 2017 | yes |
-| v2.3     | [![Build Status](https://travis-ci.org/plumed/plumed2.svg?branch=v2.3)](https://travis-ci.org/plumed/plumed2)   | Dec 12, 2016 | yes |
-| v2.2     | [![Build Status](https://travis-ci.org/plumed/plumed2.svg?branch=v2.2)](https://travis-ci.org/plumed/plumed2)   | Oct 13, 2015 |no |
-| v2.1     | [![Build Status](https://travis-ci.org/plumed/plumed2.svg?branch=v2.1)](https://travis-ci.org/plumed/plumed2)   | Sep 9, 2014 | no |
-| v2.0     | Not available | Sep 27, 2013 | no |
 
-Content
--------
 
-Here's a description of the content of each file and directory in the root PLUMED directory.
+Approach 1 - Symbolic differentiation with code generation
+--------------------
 
-    CHANGES          : change log
-    COPYING.LESSER   : license
-    Makefile         : makefile
-    Makefile.conf.in : template configuration makefile
-    PEOPLE           : list of authors
-    README           : this file
-    VERSION          : version file
-    astyle           : a local version of astyle, used to format code
-    configurations   : template configuration files
-    configure        : configuration script
-    configure.ac     : configuration script (autoconf)
-    developer-doc    : developer documentation
-    include          : symbolic link for include files
-    macports         : directory where Portfiles are generated
-    patches          : patch scripts
-    release.sh       : developer utility to publish releases
-    regtest          : regression tests, including reference results
-    scripts          : shell tools
-    src              : source code
-    sourceme.sh.in   : template configuration script
-    test             : examples
-    user-doc         : user documentation
-    vim              : directory where vim syntax is generated
+The notebook generating the "core" functions calculating the gradient
+is in src/curvature_codegen/sympy_codegen directory. To regenerate the
+code, execute the `CurvatureCodegen.ipynb` file (you will need Sympy,
+available from www.sympy.org; the easiest way to install it is via
+Conda).
 
-Required software
------------------
+To test:
 
-Required software:
+    cd regtest/curvature_codegen/rt-m2		# Or any other of the examples
+    ../../../src/lib/plumed driver --plumed plumed.dat --ixyz spiral.xyz
 
-* GNU make.
-* C/c++ compiler (c++11 support is required as of version 2.4).
-* A modern version of the `patch` command line tool.
-* Support for POSIX library `dirent.h`.
-* `xxd` (present in most UNIX distributions).
+The above test calculates the radius of curvature at several consecutive
+triplets of atoms along a spiral (see COLVAR).
 
-Suggested software (libraries are checked by `./configure` and enabled if available):
 
-* MPI library to run parallel simulations. It should be the same library used by your MD code.
-* Optimized blas and lapack libraries. They are automatically replaced by an internal version if not available.
-* [VMD molfile plugins](http://www.ks.uiuc.edu/Research/vmd/plugins) to read arbitrary file formats. They are automatically replaced by an internal version supporting a few formats if not available.
-* [Matheval library](http://www.gnu.org/software/libmatheval) to use algebraic collective variables.
-* [Zlib library](http://zlib.net/) to use compressed data files.
-* [Xdrfile library](http://www.gromacs.org/Developer_Zone/Programming_Guide/XTC_Library) to have read/write access to gromacs
-  trajectory files.
-* [Doxygen](http:://www.doxygen.org) to build user manual. Doxygen might need the following packages:
-  * Latex to build the pdf user manual.
-  * [Graphviz](http://www.graphviz.org) to show class hierarchy in
-    developer manual.
 
-Quick compilation instructions
-------------------------------
+Approach 2 - Automatic code differentiation
+--------------------
 
-Extensive installation instructions are in the [user documentation](http://www.plumed.org/documentation).
-Quick instructions:
+Building the `curvature_autodiff` source files requires the Stan Math
+library (distributed with the source). Depending on your system, you
+may need to adjust Makefile paths.
 
-    ./configure --prefix=$HOME/opt
-    make
-    make doc # optional
+To test:
 
-User documentation can be found at `user-doc/html/index.html`.
-Developer documentation can be found at `developer-doc/html/index.html`.
-[Pre-compiled documentation](http://www.plumed.org/documentation) is available online, so this is only required
-if you are working with a modified version of the code!
+    ./configure 
+    make -j4
+    cd regtest/curvature_autodiff/rt-1        # Or any other of the examples
+    ../../../src/lib/plumed driver --plumed plumed.dat --ixyz spiral.xyz
 
-In order to run PLUMED without installing it you should type `source sourceme.sh`. However,
-we recomment installing PLUMED. 
-To install it in `$HOME/opt` (directory should be set during `./configure`):
+Note that the STANMATHDEMO action is, by design, functionally equal to
+CURVATURE.
 
-    umask 022
-    make install
-    
-Now you will be able to run plumed using e.g.
+(Note: if you are using GIT, the Stan Math library,
+http://mc-stan.org/users/interfaces/math, is referenced as a
+submodule; you may need to clone this repository with the --recursive
+option.)
 
-    plumed help
 
-If you compiled your own documentation, paths to the installed documentation can be found with command `plumed info --user-doc`.
 
-A sample modulefile with environment variable will be placed in
-`$HOME/opt/lib/plumed/src/lib/modulefile`. This can be useful if you want to
-install multiple PLUMED versions side by side and select them with env modules.
+
+
+
