@@ -32,9 +32,9 @@ using namespace std;
 using namespace PLMD::multicolvar;
 
 namespace PLMD {
-namespace curvature {
+namespace curvature_codegen {
 
-//+PLUMEDOC MCOLVAR CURVATURES
+//+PLUMEDOC MCOLVAR CURVATURE_MULTICOLVAR_CODEGEN
 /*
 Calculate the local curvature at several triplets of atoms or along a polymer.
 
@@ -63,21 +63,21 @@ The following input tells plumed to calculate the curvature radiuses of the
 three circles passing through atoms 1,2 and 3; 2, 3 and 4; and 3, 4 and 5.
 The minimum of the three curvatures is used as a colvar and printed.
 \verbatim
-CURVATURES ATOMS1=1,2,3 ATOMS2=2,3,4 ATOMS3=3,4,5 MIN={BETA=0.1} LABEL=d1
+CURVATURE_MULTICOLVAR_CODEGEN ATOMS1=1,2,3 ATOMS2=2,3,4 ATOMS3=3,4,5 MIN={BETA=0.1} LABEL=d1
 \endverbatim
 
 The following input uses the POLYMER keyword and it is equivalent to
 the previous one.
 
 \verbatim
-CURVATURES POLYMER=1-5 MIN={BETA=0.1} LABEL=d1
+CURVATURE_MULTICOLVAR_CODEGEN POLYMER=1-5 MIN={BETA=0.1} LABEL=d1
 \endverbatim
 
 Count the number of beads in a polymer having a local radius of
 curvature less than 3.5:
 
 \verbatim
-d1:    CURVATURES POLYMER=1-100 LESS_THAN={RATIONAL R_0=3.5} LOWMEM
+d1:    CURVATURE_MULTICOLVAR_CODEGEN POLYMER=1-100 LESS_THAN={RATIONAL R_0=3.5} LOWMEM
 PRINT ARG=d1.lessthan
 \endverbatim
 
@@ -88,22 +88,22 @@ PRINT ARG=d1.lessthan
 
 #define POLYMER "POLYMER"
 
-class Curvatures : public MultiColvarBase {
+class CurvatureMulticolvarCodeGen : public MultiColvarBase {
 private:
   bool inverse;
   void readPolymerKeyword( std::vector<AtomNumber>& all_atoms );
 public:
   static void registerKeywords( Keywords& keys );
-  explicit Curvatures(const ActionOptions&);
+  explicit CurvatureMulticolvarCodeGen(const ActionOptions&);
 // active methods:
   virtual double compute( const unsigned& tindex, AtomValuePack& myatoms ) const ;
 /// Returns the number of coordinates of the field
   bool isPeriodic() { return false; }
 };
 
-PLUMED_REGISTER_ACTION(Curvatures,"CURVATURES")
+PLUMED_REGISTER_ACTION(CurvatureMulticolvarCodeGen,"CURVATURE_MULTICOLVAR_CODEGEN")
 
-void Curvatures::registerKeywords( Keywords& keys ) {
+void CurvatureMulticolvarCodeGen::registerKeywords( Keywords& keys ) {
   MultiColvarBase::registerKeywords( keys );
   keys.add("atoms",POLYMER,"list the beads compounding the polymer");
   keys.addFlag("INVERSE",false,"return the inverse of the radius");
@@ -116,7 +116,7 @@ void Curvatures::registerKeywords( Keywords& keys ) {
   keys.use("MORE_THAN"); keys.use("BETWEEN"); keys.use("HISTOGRAM"); keys.use("MOMENTS");
 }
 
-void Curvatures::readPolymerKeyword( std::vector<AtomNumber>& all_atoms ) {
+void CurvatureMulticolvarCodeGen::readPolymerKeyword( std::vector<AtomNumber>& all_atoms ) {
   std::vector<AtomNumber> t;
   const int natoms=3;
   parseAtomList(POLYMER, -1, t);
@@ -150,7 +150,7 @@ void Curvatures::readPolymerKeyword( std::vector<AtomNumber>& all_atoms ) {
 }
 
 
-Curvatures::Curvatures(const ActionOptions&ao):
+CurvatureMulticolvarCodeGen::CurvatureMulticolvarCodeGen(const ActionOptions&ao):
   Action(ao),
   MultiColvarBase(ao),
   inverse(false)
@@ -190,7 +190,7 @@ Curvatures::Curvatures(const ActionOptions&ao):
 }
 
 
-double Curvatures::compute( const unsigned& tindex, AtomValuePack& myatoms ) const {
+double CurvatureMulticolvarCodeGen::compute( const unsigned& tindex, AtomValuePack& myatoms ) const {
 
   // PBC?
 

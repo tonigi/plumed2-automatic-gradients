@@ -20,8 +20,8 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-#ifndef __PLUMED_stanmath_StanMathDemo_h
-#define __PLUMED_stanmath_StanMathDemo_h
+#ifndef __PLUMED_curvature_autodiff_CurvatureAutoDiff_h
+#define __PLUMED_curvature_autodiff_CurvatureAutoDiff_h
 
 #include "core/PlumedMain.h"
 #include "colvar/Colvar.h"
@@ -35,10 +35,7 @@
 
 
 namespace PLMD {
-namespace stanmath {
-
-
-
+namespace curvature_autodiff {
 
 
 }

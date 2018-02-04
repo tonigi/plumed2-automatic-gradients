@@ -20,16 +20,16 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-#include "StanMathDemo.h"
+#include "CurvatureAutoDiff.h"
 
 #define CURVATURE_CITATION "Giorgino T.,  Automatic Gradient Computation Approaches for PLUMED 2  (provisional title)."
 
 using namespace std;
 
 namespace PLMD {
-namespace stanmath {
+namespace curvature_autodiff {
 
-//+PLUMEDOC COLVAR STANMATHDEMO
+//+PLUMEDOC COLVAR CURVATURE_AUTODIFF
 /*
 
 This file provides a dummy colvar to demonstrate how to implement
@@ -44,7 +44,7 @@ providing an extensive library of mathematical and statistical
 functions, automatic compile-time differentiation, ODE support, linear
 algebra, and so on.
 
-Please see the source code of \ref StanMathDemo.cpp .
+Please see the source code of \ref CurvatureAutoDiff.cpp .
 
 > Bob Carpenter, Matthew D. Hoffman, Marcus Brubaker, Daniel Lee,
   Peter Li, and Michael J. Betancourt. 2015. The Stan Math Library:
@@ -114,13 +114,13 @@ public:
 
 static const int natoms=3;
 
-class StanMathDemo : public Colvar {
+class CurvatureAutoDiff : public Colvar {
   bool pbc;
   bool inverse;
 
 public:
   static void registerKeywords( Keywords& keys );
-  explicit StanMathDemo(const ActionOptions&);
+  explicit CurvatureAutoDiff(const ActionOptions&);
 // active methods:
   virtual void calculate();
 
@@ -130,7 +130,7 @@ private:
 
 };
 
-PLUMED_REGISTER_ACTION(StanMathDemo,"STANMATHDEMO")
+PLUMED_REGISTER_ACTION(CurvatureAutoDiff,"CURVATURE_AUTODIFF")
 
 
 // Unpack atom positions as an Eigen matrix object. Passing by
@@ -138,7 +138,7 @@ PLUMED_REGISTER_ACTION(StanMathDemo,"STANMATHDEMO")
 // static, if we have a way to (a) call the appropriate getPosition()
 // method, and (b) know the natoms value for the current colvar. If
 // necessary we could use a Dynamic size.
-inline void StanMathDemo::getAtomPositionsAsEigenMatrix(Eigen::Matrix<double,3*natoms,1> &x) {
+inline void CurvatureAutoDiff::getAtomPositionsAsEigenMatrix(Eigen::Matrix<double,3*natoms,1> &x) {
   int j=0;
   for(int i=0; i<natoms; i++) {
     Vector v=getPosition(i);
@@ -150,7 +150,7 @@ inline void StanMathDemo::getAtomPositionsAsEigenMatrix(Eigen::Matrix<double,3*n
 }
 
 // Unpack a vector from eigen into a number of Plumed Vectors and set derivatives.
-inline void StanMathDemo::setDerivativesFromEigenMatrix(Eigen::Matrix<double,3*natoms,1> gx) {
+inline void CurvatureAutoDiff::setDerivativesFromEigenMatrix(Eigen::Matrix<double,3*natoms,1> gx) {
   for (int i=0; i<natoms; i++) {
     int j=i*3;
     Vector v(gx[j],gx[j+1],gx[j+2]);
@@ -159,14 +159,14 @@ inline void StanMathDemo::setDerivativesFromEigenMatrix(Eigen::Matrix<double,3*n
 }
 
 
-void StanMathDemo::registerKeywords( Keywords& keys ) {
+void CurvatureAutoDiff::registerKeywords( Keywords& keys ) {
   Colvar::registerKeywords( keys );
   keys.add("atoms","ATOMS","the list of three atoms around which to calculate the stanmathdemo");
   keys.addFlag("INVERSE",false,"return the inverse of the radius");
 }
 
 
-StanMathDemo::StanMathDemo(const ActionOptions&ao):
+CurvatureAutoDiff::CurvatureAutoDiff(const ActionOptions&ao):
   PLUMED_COLVAR_INIT(ao),
   pbc(true),
   inverse(false)
@@ -197,7 +197,7 @@ StanMathDemo::StanMathDemo(const ActionOptions&ao):
 
 
 // calculator
-void StanMathDemo::calculate() {
+void CurvatureAutoDiff::calculate() {
 
   if(pbc) makeWhole();
 

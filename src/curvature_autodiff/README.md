@@ -16,7 +16,7 @@ approaches described in the paper
 > PLUMED2. CPC (submitted)
 
 ...and complements it. The other approach, automatic symbolic
-differentiation, is shown in the `curvature` module.
+differentiation, is shown in the `curvature_codegen` module.
 
 Note that the Stan Math library is included here as a git
 submodule. Make sure you have submodules enabled. The easiest way is

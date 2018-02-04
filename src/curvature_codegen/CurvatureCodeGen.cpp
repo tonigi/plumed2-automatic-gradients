@@ -31,9 +31,9 @@
 using namespace std;
 
 namespace PLMD {
-namespace curvature {
+namespace curvature_codegen {
 
-//+PLUMEDOC COLVAR CURVATURE
+//+PLUMEDOC COLVAR CURVATURE_CODEGEN
 /*
 Calculate the approximate radius of curvature given three atoms.
 
@@ -49,7 +49,7 @@ radius) for straight polymers.
 By default the computation takes into account periodic boundary
 conditions, unless the NOPBC flag is given.
 
-To compute several local curvatures at once see the \ref CURVATURES
+To compute several local curvatures at once see the \ref CURVATURE_CODEGENS
 multicolvar.
 
 
@@ -60,8 +60,8 @@ The following input tells PLUMED to print the curvature at
 atoms 1,2,3 and its reciprocal.
 
 \verbatim
-c1:  CURVATURE ATOMS=1,2,3
-c1i: CURVATURE ATOMS=1,2,3 INVERSE
+c1:  CURVATURE_CODEGEN ATOMS=1,2,3
+c1i: CURVATURE_CODEGEN ATOMS=1,2,3 INVERSE
 PRINT ARG=c1, c1i
 \endverbatim
 
@@ -100,27 +100,27 @@ the \ref ANGLE collective variable, they are taken as zero.
 */
 //+ENDPLUMEDOC
 
-class Curvature : public Colvar {
+class CurvatureCodeGen : public Colvar {
   bool inverse;
   bool pbc;
 
 public:
   static void registerKeywords( Keywords& keys );
-  explicit Curvature(const ActionOptions&);
+  explicit CurvatureCodeGen(const ActionOptions&);
 // active methods:
   virtual void calculate();
 };
 
-PLUMED_REGISTER_ACTION(Curvature,"CURVATURE")
+PLUMED_REGISTER_ACTION(CurvatureCodeGen,"CURVATURE_CODEGEN")
 
-void Curvature::registerKeywords( Keywords& keys ) {
+void CurvatureCodeGen::registerKeywords( Keywords& keys ) {
   Colvar::registerKeywords( keys );
   keys.add("atoms","ATOMS","the list of three atoms around which to calculate the curvature");
   keys.addFlag("INVERSE",false,"return the inverse of the radius");
   // Why is NOPBC not listed here?
 }
 
-Curvature::Curvature(const ActionOptions&ao):
+CurvatureCodeGen::CurvatureCodeGen(const ActionOptions&ao):
   PLUMED_COLVAR_INIT(ao),
   inverse(false),
   pbc(true)
@@ -154,7 +154,7 @@ Curvature::Curvature(const ActionOptions&ao):
 
 
 // calculator
-void Curvature::calculate() {
+void CurvatureCodeGen::calculate() {
 
   if(pbc) makeWhole();
 
@@ -195,7 +195,7 @@ void Curvature::calculate() {
       gb = minus_inv_r2*gb;
       gc = minus_inv_r2*gc;
     } else {
-      log.printf("CURVATURE: radius %f occurred, setting null gradient\n",r);
+      log.printf("CURVATURE_CODEGEN: radius %f occurred, setting null gradient\n",r);
       Vector v0(0,0,0);
       ga = gb = gc = v0;
     }

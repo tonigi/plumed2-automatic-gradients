@@ -5,7 +5,7 @@
 #include <cmath>
 
 namespace PLMD {
-namespace curvature {
+namespace curvature_codegen {
 
 #include "sympy_codegen/curvature_codegen.c"
 
