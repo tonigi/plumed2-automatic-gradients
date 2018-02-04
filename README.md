@@ -9,7 +9,7 @@ collective variables in PLUMED.
 It is a fork of the PLUMED 2 repository (www.plumed.org) taken at
 release v2.4.0.
 
-The new code is contained in PLUMED submodules (directories)
+The new code is contained in submodules (directories) named
 `src/curvature_codegen` (code generation approach from symbolic
 expressions by SymPy) and `src/curvature_autodiff` (code
 differentiation approach by the Stan Math library). You may use the
@@ -17,7 +17,7 @@ supplied C++ files as templates to implement your own CVs. The modules
 can be enabled or disabled independently.
 
 Example files with regression tests are provided in the directories
-"regtest/curvature_codegen" and "regtest/curvature_autodiff"
+`regtest/curvature_codegen` and `regtest/curvature_autodiff`
 respectively.  The rest of PLUMED 2 repository is unchanged.
 
 To test, on most common machines the following instructions should get
@@ -26,7 +26,7 @@ you started. After extracting the distribution:
     ./configure 
     make -j4
 
-You can enable and disable the modules individually, as follows:
+You can enable and disable the modules independently, as follows:
 
     ./configure --enable-modules=+curvature_codegen:-curvature_autodiff
 
@@ -64,9 +64,6 @@ To test:
     make -j4
     cd regtest/curvature_autodiff/rt-1        # Or any other of the examples
     ../../../src/lib/plumed driver --plumed plumed.dat --ixyz spiral.xyz
-
-Note that the STANMATHDEMO action is, by design, functionally equal to
-CURVATURE.
 
 (Note: if you are using GIT, the Stan Math library,
 http://mc-stan.org/users/interfaces/math, is referenced as a
