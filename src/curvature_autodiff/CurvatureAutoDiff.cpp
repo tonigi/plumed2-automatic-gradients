@@ -22,7 +22,7 @@
 
 #include "CurvatureAutoDiff.h"
 
-#define CURVATURE_CITATION "Giorgino T.,  Practical Approaches to Differentiate Collective Variables in Free Energy Codes: Computer-Algebra Code Generation and Automatic Differentiation, Comp. Phys. Comm. (provisional)."
+#define CURVATURE_CITATION "T. Giorgino, How to Differentiate Collective Variables in Free Energy Codes: Computer-Algebra Code Generation and Automatic Differentiation, Comp. Phys. Comm.  (submitted)"
 
 using namespace std;
 

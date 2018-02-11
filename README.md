@@ -1,9 +1,9 @@
 Automatic Gradient Computation for Collective Variables in PLUMED 2
 ========================================
 
-This repository contains example code from the paper "Practical
-Approaches to Differentiate Collective Variables in Free Energy Codes:
-Computer-Algebra Code Generation and Automatic Differentiation",
+This repository contains example code from the paper *How to
+Differentiate Collective Variables in Free Energy Codes:
+Computer-Algebra Code Generation and Automatic Differentiation*,
 illustrating two approaches to automated gradient computation for
 collective variables in PLUMED.
 
