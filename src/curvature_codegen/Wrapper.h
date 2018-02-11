@@ -4,7 +4,7 @@
 #ifndef __PLUMED_curvature_codegen_Wrapper_h
 #define __PLUMED_curvature_codegen_Wrapper_h
 
-#define CURVATURE_CITATION "T. Giorgino, How to Differentiate Collective Variables in Free Energy Codes: Computer-Algebra Code Generation and Automatic Differentiation, Comp. Phys. Comm."
+#define CURVATURE_CITATION "T. Giorgino, How to Differentiate Collective Variables in Free Energy Codes: Computer-Algebra Code Generation and Automatic Differentiation, Comp. Phys. Comm. (submitted)"
 
 namespace PLMD {
 namespace curvature_codegen {
