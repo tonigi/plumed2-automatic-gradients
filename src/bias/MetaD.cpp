@@ -159,39 +159,40 @@ as done e.g. in Ref. \cite gil2015enhanced . This indeed can be obtained by usin
 action multiple times in the same input file.
 
 \par Examples
+
 The following input is for a standard metadynamics calculation using as
 collective variables the distance between atoms 3 and 5
 and the distance between atoms 2 and 4. The value of the CVs and
 the metadynamics bias potential are written to the COLVAR file every 100 steps.
-\verbatim
+\plumedfile
 DISTANCE ATOMS=3,5 LABEL=d1
 DISTANCE ATOMS=2,4 LABEL=d2
 METAD ARG=d1,d2 SIGMA=0.2,0.2 HEIGHT=0.3 PACE=500 LABEL=restraint
 PRINT ARG=d1,d2,restraint.bias STRIDE=100  FILE=COLVAR
-\endverbatim
+\endplumedfile
 (See also \ref DISTANCE \ref PRINT).
 
 \par
 If you use adaptive Gaussians, with diffusion scheme where you use
 a Gaussian that should cover the space of 20 timesteps in collective variables.
 Note that in this case the histogram correction is needed when summing up hills.
-\verbatim
+\plumedfile
 DISTANCE ATOMS=3,5 LABEL=d1
 DISTANCE ATOMS=2,4 LABEL=d2
 METAD ARG=d1,d2 SIGMA=20 HEIGHT=0.3 PACE=500 LABEL=restraint ADAPTIVE=DIFF
 PRINT ARG=d1,d2,restraint.bias STRIDE=100  FILE=COLVAR
-\endverbatim
+\endplumedfile
 
 \par
 If you use adaptive Gaussians, with geometrical scheme where you use
 a Gaussian that should cover the space of 0.05 nm in Cartesian space.
 Note that in this case the histogram correction is needed when summing up hills.
-\verbatim
+\plumedfile
 DISTANCE ATOMS=3,5 LABEL=d1
 DISTANCE ATOMS=2,4 LABEL=d2
 METAD ARG=d1,d2 SIGMA=0.05 HEIGHT=0.3 PACE=500 LABEL=restraint ADAPTIVE=GEOM
 PRINT ARG=d1,d2,restraint.bias STRIDE=100  FILE=COLVAR
-\endverbatim
+\endplumedfile
 
 \par
 When using adaptive Gaussians you might want to limit how the hills width can change.
@@ -199,7 +200,7 @@ You can use SIGMA_MIN and SIGMA_MAX keywords.
 The sigmas should specified in terms of CV so you should use the CV units.
 Note that if you use a negative number, this means that the limit is not set.
 Note also that in this case the histogram correction is needed when summing up hills.
-\verbatim
+\plumedfile
 DISTANCE ATOMS=3,5 LABEL=d1
 DISTANCE ATOMS=2,4 LABEL=d2
 METAD ...
@@ -207,7 +208,7 @@ METAD ...
   SIGMA_MIN=0.2,0.1 SIGMA_MAX=0.5,1.0
 ... METAD
 PRINT ARG=d1,d2,restraint.bias STRIDE=100  FILE=COLVAR
-\endverbatim
+\endplumedfile
 
 \par
 Multiple walkers can be also use as in  \cite multiplewalkers
@@ -215,7 +216,7 @@ These are enabled by setting the number of walker used, the id of the
 current walker which interprets the input file, the directory where the
 hills containing files resides, and the frequency to read the other walkers.
 Here is an example
-\verbatim
+\plumedfile
 DISTANCE ATOMS=3,5 LABEL=d1
 METAD ...
    ARG=d1 SIGMA=0.05 HEIGHT=0.3 PACE=500 LABEL=restraint
@@ -224,7 +225,7 @@ METAD ...
    WALKERS_DIR=../
    WALKERS_RSTRIDE=100
 ... METAD
-\endverbatim
+\endplumedfile
 where  WALKERS_N is the total number of walkers, WALKERS_ID is the
 id of the present walker (starting from 0 ) and the WALKERS_DIR is the directory
 where all the walkers are located. WALKERS_RSTRIDE is the number of step between
@@ -237,7 +238,7 @@ presented in \cite Tiwary_jp504920s as described above.
 This is enabled by using the keyword REWEIGHTING_NGRID where the grid used for
 the calculation is set. The number of grid points given in REWEIGHTING_NGRID
 should be equal or larger than the number of grid points given in GRID_BIN.
-\verbatim
+\plumedfile
 METAD ...
  LABEL=metad
  ARG=phi,psi SIGMA=0.20,0.20 HEIGHT=1.20 BIASFACTOR=5 TEMP=300.0 PACE=500
@@ -245,7 +246,7 @@ METAD ...
  REWEIGHTING_NGRID=150,150
  REWEIGHTING_NHILLS=20
 ... METAD
-\endverbatim
+\endplumedfile
 Here we have asked that the calculation is performed every 20 hills by using
 REWEIGHTING_NHILLS keyword. If this keyword is not given the calculation will
 by default be performed every 50 hills. The c(t) reweighting factor will be given
@@ -285,7 +286,7 @@ Alternatively, if you use a BIASFACTOR yout simulation will converge to a free
 energy that is a linear combination of the target free energy and of the intrinsic free energy
 determined by the original force field.
 
-\verbatim
+\plumedfile
 DISTANCE ATOMS=3,5 LABEL=d1
 METAD ...
  LABEL=t1
@@ -295,7 +296,7 @@ METAD ...
 ... METAD
 
 PRINT ARG=d1,t1.bias STRIDE=100 FILE=COLVAR
-\endverbatim
+\endplumedfile
 
 The header in the file dist.dat for this calculation would read:
 
@@ -306,6 +307,27 @@ The header in the file dist.dat for this calculation would read:
 #! SET nbins_d1  200
 #! SET periodic_d1 false
 \endverbatim
+
+Notice that BIASFACTOR can also be chosen as equal to 1. In this case one will perform
+unbiased sampling. Instead of using HEIGHT, one should provide the TAU parameter.
+\plumedfile
+d: DISTANCE ATOMS=3,5
+METAD ARG=d SIGMA=0.1 TAU=4.0 TEMP=300 PACE=100 BIASFACTOR=1.0
+\endplumedfile
+The HILLS file obtained will still work with `plumed sum_hills` so as to plot a free-energy.
+The case where this makes sense is probably that of RECT simulations.
+
+Regarding RECT simulations, you can also use the RECT keyword so as to avoid using multiple input files.
+For instance, a single input file will be
+\plumedfile
+d: DISTANCE ATOMS=3,5
+METAD ARG=d SIGMA=0.1 TAU=4.0 TEMP=300 PACE=100 RECT=1.0,1.5,2.0,3.0
+\endplumedfile
+The number of elements in the RECT array should be equal to the number of replicas.
+
+
+
+
 
 */
 //+ENDPLUMEDOC
@@ -325,6 +347,17 @@ private:
       for(unsigned i=0; i<invsigma.size(); ++i) abs(invsigma[i])>1.e-20?invsigma[i]=1.0/invsigma[i]:0.;
     }
   };
+  struct TemperingSpecs {
+    bool is_active;
+    std::string name_stem;
+    std::string name;
+    double biasf;
+    double threshold;
+    double alpha;
+    inline TemperingSpecs(bool is_active, const std::string &name_stem, const std::string &name, double biasf, double threshold, double alpha) :
+      is_active(is_active), name_stem(name_stem), name(name), biasf(biasf), threshold(threshold), alpha(alpha)
+    {}
+  };
   vector<double> sigma0_;
   vector<double> sigma0min_;
   vector<double> sigma0max_;
@@ -337,7 +370,10 @@ private:
   bool grid_;
   double height0_;
   double biasf_;
+  static const size_t n_tempering_options_ = 1;
+  static const string tempering_names_[1][2];
   double dampfactor_;
+  struct TemperingSpecs tt_specs_;
   std::string targetfilename_;
   Grid* TargetGrid_;
   double kbt_;
@@ -352,8 +388,15 @@ private:
   int mw_rstride_;
   bool walkers_mpi;
   unsigned mpi_nw_;
+  unsigned mpi_mw_;
   bool acceleration;
   double acc;
+  double acc_restart_mean_;
+  bool calc_max_bias_;
+  double max_bias_;
+  bool calc_transition_bias_;
+  double transition_bias_;
+  vector<vector<double> > transitionwells_;
   vector<IFile*> ifiles;
   vector<string> ifilesnames;
   double uppI_;
@@ -366,18 +409,22 @@ private:
   double work_;
   long int last_step_warn_grid;
 
+  static void   registerTemperingKeywords(const std::string &name_stem, const std::string &name, Keywords &keys);
+  void   readTemperingSpecs(TemperingSpecs &t_specs);
+  void   logTemperingSpecs(const TemperingSpecs &t_specs);
   void   readGaussians(IFile*);
   bool   readChunkOfGaussians(IFile *ifile, unsigned n);
   void   writeGaussian(const Gaussian&,OFile&);
   void   addGaussian(const Gaussian&);
   double getHeight(const vector<double>&);
+  void   temperHeight(double &height, const TemperingSpecs &t_specs, const double tempering_bias);
   double getBiasAndDerivatives(const vector<double>&,double* der=NULL);
   double evaluateGaussian(const vector<double>&, const Gaussian&,double* der=NULL);
-  void   finiteDifferenceGaussian(const vector<double>&, const Gaussian&);
   double getGaussianNormalization( const Gaussian& );
   vector<unsigned> getGaussianSupport(const Gaussian&);
   bool   scanOneHill(IFile *ifile,  vector<Value> &v, vector<double> &center, vector<double>  &sigma, double &height, bool &multivariate);
   void   computeReweightingFactor();
+  double getTransitionBarrierBias();
   string fmt;
 
 public:
@@ -398,6 +445,8 @@ void MetaD::registerKeywords(Keywords& keys) {
   keys.addOutputComponent("rct","REWEIGHTING_NGRID","the reweighting factor \\f$c(t)\\f$.");
   keys.addOutputComponent("work","default","accumulator for work");
   keys.addOutputComponent("acc","ACCELERATION","the metadynamics acceleration factor");
+  keys.addOutputComponent("maxbias", "CALC_MAX_BIAS", "the maximum of the metadynamics V(s, t)");
+  keys.addOutputComponent("transbias", "CALC_TRANSITION_BIAS", "the metadynamics transition bias V*(t)");
   keys.use("ARG");
   keys.add("compulsory","SIGMA","the widths of the Gaussian hills");
   keys.add("compulsory","PACE","the frequency for hill addition");
@@ -405,7 +454,11 @@ void MetaD::registerKeywords(Keywords& keys) {
   keys.add("optional","HEIGHT","the heights of the Gaussian hills. Compulsory unless TAU and either BIASFACTOR or DAMPFACTOR are given");
   keys.add("optional","FMT","specify format for HILLS files (useful for decrease the number of digits in regtests)");
   keys.add("optional","BIASFACTOR","use well tempered metadynamics and use this biasfactor.  Please note you must also specify temp");
+  keys.add("optional","RECT","list of bias factors for all the replicas");
   keys.add("optional","DAMPFACTOR","damp hills with exp(-max(V)/(kbT*DAMPFACTOR)");
+  for (size_t i = 0; i < n_tempering_options_; i++) {
+    registerTemperingKeywords(tempering_names_[i][0], tempering_names_[i][1], keys);
+  }
   keys.add("optional","TARGET","target to a predefined distribution");
   keys.add("optional","TEMP","the system temperature - this is only needed if you are doing well-tempered metadynamics");
   keys.add("optional","TAU","in well tempered metadynamics, sets height to (kb*DeltaT*pace*timestep)/tau");
@@ -433,11 +486,23 @@ void MetaD::registerKeywords(Keywords& keys) {
   keys.add("optional","INTERVAL","monodimensional lower and upper limits, outside the limits the system will not feel the biasing force.");
   keys.add("optional","SIGMA_MAX","the upper bounds for the sigmas (in CV units) when using adaptive hills. Negative number means no bounds ");
   keys.add("optional","SIGMA_MIN","the lower bounds for the sigmas (in CV units) when using adaptive hills. Negative number means no bounds ");
-  keys.addFlag("WALKERS_MPI",false,"Switch on MPI version of multiple walkers - not compatible with other WALKERS_* options");
+  keys.addFlag("WALKERS_MPI",false,"Switch on MPI version of multiple walkers - not compatible with WALKERS_* options other than WALKERS_DIR");
   keys.addFlag("ACCELERATION",false,"Set to TRUE if you want to compute the metadynamics acceleration factor.");
+  keys.add("optional","ACCELERATION_RFILE","a data file from which the acceleration should be read at the initial step of the simulation");
+  keys.addFlag("CALC_MAX_BIAS", false, "Set to TRUE if you want to compute the maximum of the metadynamics V(s, t)");
+  keys.addFlag("CALC_TRANSITION_BIAS", false, "Set to TRUE if you want to compute a metadynamics transition bias V*(t)");
+  keys.add("numbered", "TRANSITIONWELL", "This keyword appears multiple times as TRANSITIONWELLx with x=0,1,2,...,n. Each specifies the coordinates for one well as in transition-tempered metadynamics. At least one must be provided.");
   keys.use("RESTART");
   keys.use("UPDATE_FROM");
   keys.use("UPDATE_UNTIL");
+}
+
+const std::string MetaD::tempering_names_[1][2] = {{"TT", "transition tempered"}};
+
+void MetaD::registerTemperingKeywords(const std::string &name_stem, const std::string &name, Keywords &keys) {
+  keys.add("optional", name_stem + "BIASFACTOR", "use " + name + " metadynamics with this biasfactor.  Please note you must also specify temp");
+  keys.add("optional", name_stem + "BIASTHRESHOLD", "use " + name + " metadynamics with this bias threshold.  Please note you must also specify " + name_stem + "BIASFACTOR");
+  keys.add("optional", name_stem + "ALPHA", "use " + name + " metadynamics with this hill size decay exponent parameter.  Please note you must also specify " + name_stem + "BIASFACTOR");
 }
 
 MetaD::~MetaD() {
@@ -459,16 +524,20 @@ MetaD::MetaD(const ActionOptions& ao):
 // Grid stuff initialization
   BiasGrid_(NULL), wgridstride_(0), grid_(false),
 // Metadynamics basic parameters
-  height0_(std::numeric_limits<double>::max()), biasf_(1.0), dampfactor_(0.0), TargetGrid_(NULL),
+  height0_(std::numeric_limits<double>::max()), biasf_(-1.0), dampfactor_(0.0),
+  tt_specs_(false, "TT", "Transition Tempered", -1.0, 0.0, 1.0),
+  TargetGrid_(NULL),
   kbt_(0.0),
   stride_(0), welltemp_(false),
 // Other stuff
   dp_(NULL), adaptive_(FlexibleBin::none),
   flexbin(NULL),
 // Multiple walkers initialization
-  mw_n_(1), mw_dir_("./"), mw_id_(0), mw_rstride_(1),
-  walkers_mpi(false), mpi_nw_(0),
-  acceleration(false), acc(0.0),
+  mw_n_(1), mw_dir_(""), mw_id_(0), mw_rstride_(1),
+  walkers_mpi(false), mpi_nw_(0), mpi_mw_(0),
+  acceleration(false), acc(0.0), acc_restart_mean_(0.0),
+  calc_max_bias_(false), max_bias_(0.0),
+  calc_transition_bias_(false), transition_bias_(0.0),
 // Interval initialization
   uppI_(-1), lowI_(-1), doInt_(false),
   isFirstStep(true),
@@ -536,20 +605,56 @@ MetaD::MetaD(const ActionOptions& ao):
   if(stride_<=0 ) error("frequency for hill addition is nonsensical");
   string hillsfname="HILLS";
   parse("FILE",hillsfname);
-  parse("BIASFACTOR",biasf_);
-  if( biasf_<1.0 ) error("well tempered bias factor is nonsensical");
+
+  // Manually set to calculate special bias quantities
+  // throughout the course of simulation. (These are chosen due to
+  // relevance for tempering and event-driven logic as well.)
+  parseFlag("CALC_MAX_BIAS", calc_max_bias_);
+  parseFlag("CALC_TRANSITION_BIAS", calc_transition_bias_);
+
+  std::vector<double> rect_biasf_;
+  parseVector("RECT",rect_biasf_);
+  if(rect_biasf_.size()>0) {
+    int r=0;
+    if(comm.Get_rank()==0) r=multi_sim_comm.Get_rank();
+    comm.Bcast(r,0);
+    biasf_=rect_biasf_[r];
+    log<<"  You are using RECT\n";
+  } else {
+    parse("BIASFACTOR",biasf_);
+  }
+  if( biasf_<1.0  && biasf_!=-1.0) error("well tempered bias factor is nonsensical");
   parse("DAMPFACTOR",dampfactor_);
   double temp=0.0;
   parse("TEMP",temp);
   if(temp>0.0) kbt_=plumed.getAtoms().getKBoltzmann()*temp;
   else kbt_=plumed.getAtoms().getKbT();
-  if(biasf_>1.0) {
+  if(biasf_>=1.0) {
     if(kbt_==0.0) error("Unless the MD engine passes the temperature to plumed, with well-tempered metad you must specify it using TEMP");
     welltemp_=true;
   }
   if(dampfactor_>0.0) {
     if(kbt_==0.0) error("Unless the MD engine passes the temperature to plumed, with damped metad you must specify it using TEMP");
   }
+
+  // Set transition tempering parameters.
+  // Transition wells are read later via calc_transition_bias_.
+  readTemperingSpecs(tt_specs_);
+  if (tt_specs_.is_active) calc_transition_bias_ = true;
+
+  // If any previous option specified to calculate a transition bias,
+  // now read the transition wells for that quantity.
+  if (calc_transition_bias_) {
+    vector<double> tempcoords(getNumberOfArguments());
+    for (unsigned i = 0; ; i++) {
+      if (!parseNumberedVector("TRANSITIONWELL", i, tempcoords) ) break;
+      if (tempcoords.size() != getNumberOfArguments()) {
+        error("incorrect number of coordinates for transition tempering well");
+      }
+      transitionwells_.push_back(tempcoords);
+    }
+  }
+
   parse("TARGET",targetfilename_);
   if(targetfilename_.length()>0 && kbt_==0.0)  error("with TARGET temperature must be specified");
   double tau=0.0;
@@ -561,7 +666,10 @@ MetaD::MetaD(const ActionOptions& ao):
     else if(dampfactor_>0.0) tau=(kbt_*dampfactor_)/height0_*getTimeStep()*stride_;
   } else {
     if(height0_!=std::numeric_limits<double>::max()) error("At most one between HEIGHT and TAU should be specified");
-    if(welltemp_) height0_=(kbt_*(biasf_-1.0))/tau*getTimeStep()*stride_;
+    if(welltemp_) {
+      if(biasf_!=1.0) height0_=(kbt_*(biasf_-1.0))/tau*getTimeStep()*stride_;
+      else           height0_=kbt_/tau*getTimeStep()*stride_; // special case for gamma=1
+    }
     else if(dampfactor_>0.0) height0_=(kbt_*dampfactor_)/tau*getTimeStep()*stride_;
     else error("TAU only makes sense in well-tempered or damped metadynamics");
   }
@@ -675,6 +783,11 @@ MetaD::MetaD(const ActionOptions& ao):
 
   acceleration=false;
   parseFlag("ACCELERATION",acceleration);
+  // Check for a restart acceleration if acceleration is active.
+  string acc_rfilename;
+  if (acceleration) {
+    parse("ACCELERATION_RFILE", acc_rfilename);
+  }
 
   checkRead();
 
@@ -690,6 +803,62 @@ MetaD::MetaD(const ActionOptions& ao):
     log.printf("  Hills relaxation time (tau) %f\n",tau);
     log.printf("  KbT %f\n",kbt_);
   }
+  // Transition tempered metadynamics options
+  if (tt_specs_.is_active) {
+    logTemperingSpecs(tt_specs_);
+    // Check that the appropriate transition bias quantity is calculated.
+    // (Should never trip, given that the flag is automatically set.)
+    if (!calc_transition_bias_) {
+      error(" transition tempering requires calculation of a transition bias");
+    }
+  }
+
+  // Overall tempering sanity check (this gets tricky when multiple are active).
+  // When multiple temperings are active, it's fine to have one tempering attempt
+  // to increase hill size with increasing bias, so long as the others can shrink
+  // the hills faster than it increases their size in the long-time limit.
+  // This set of checks ensures that the hill sizes eventually decay to zero as c(t)
+  // diverges to infinity.
+  // The alpha parameter allows hills to decay as 1/t^alpha instead of 1/t,
+  // a slower decay, so as t -> infinity, only the temperings with the largest
+  // alphas govern the final asymptotic decay. (Alpha helps prevent false convergence.)
+  if (welltemp_ || dampfactor_ > 0.0 || tt_specs_.is_active) {
+    // Determine the number of active temperings.
+    int n_active = 0;
+    if (welltemp_) n_active++;
+    if (dampfactor_ > 0.0) n_active++;
+    if (tt_specs_.is_active) n_active++;
+    // Find the greatest alpha.
+    double greatest_alpha = 0.0;
+    if (welltemp_) greatest_alpha = max(greatest_alpha, 1.0);
+    if (dampfactor_ > 0.0) greatest_alpha = max(greatest_alpha, 1.0);
+    if (tt_specs_.is_active) greatest_alpha = max(greatest_alpha, tt_specs_.alpha);
+    // Find the least alpha.
+    double least_alpha = 1.0;
+    if (welltemp_) least_alpha = min(least_alpha, 1.0);
+    if (dampfactor_ > 0.0) least_alpha = min(least_alpha, 1.0);
+    if (tt_specs_.is_active) least_alpha = min(least_alpha, tt_specs_.alpha);
+    // Find the inverse harmonic average of the delta T parameters for all
+    // of the temperings with the greatest alpha values.
+    double total_governing_deltaT_inv = 0.0;
+    if (welltemp_ && 1.0 == greatest_alpha && biasf_ != 1.0) total_governing_deltaT_inv += 1.0 / (biasf_ - 1.0);
+    if (dampfactor_ > 0.0 && 1.0 == greatest_alpha) total_governing_deltaT_inv += 1.0 / (dampfactor_);
+    if (tt_specs_.is_active && tt_specs_.alpha == greatest_alpha) total_governing_deltaT_inv += 1.0 / (tt_specs_.biasf - 1.0);
+    // Give a newbie-friendly error message for people using one tempering if
+    // only one is active.
+    if (n_active == 1 && total_governing_deltaT_inv < 0.0) {
+      error("for stable tempering, the bias factor must be greater than one");
+      // Give a slightly more complex error message to users stacking multiple
+      // tempering options at a time, but all with uniform alpha values.
+    } else if (total_governing_deltaT_inv < 0.0 && greatest_alpha == least_alpha) {
+      error("for stable tempering, the sum of the inverse Delta T parameters must be greater than zero!");
+      // Give the most technical error message to users stacking multiple tempering
+      // options with different alpha parameters.
+    } else if (total_governing_deltaT_inv < 0.0 && greatest_alpha != least_alpha) {
+      error("for stable tempering, the sum of the inverse Delta T parameters for the greatest asymptotic hill decay exponents must be greater than zero!");
+    }
+  }
+
   if(doInt_) log.printf("  Upper and Lower limits boundaries for the bias are activated at %f - %f\n", lowI_, uppI_);
   if(grid_) {
     log.printf("  Grid min");
@@ -711,17 +880,20 @@ MetaD::MetaD(const ActionOptions& ao):
     log.printf("  %d multiple walkers active\n",mw_n_);
     log.printf("  walker id %d\n",mw_id_);
     log.printf("  reading stride %d\n",mw_rstride_);
-    log.printf("  directory with hills files %s\n",mw_dir_.c_str());
+    if(mw_dir_!="")log.printf("  directory with hills files %s\n",mw_dir_.c_str());
   } else {
     if(walkers_mpi) {
       log.printf("  Multiple walkers active using MPI communnication\n");
+      if(mw_dir_!="")log.printf("  directory with hills files %s\n",mw_dir_.c_str());
       if(comm.Get_rank()==0) {
         // Only root of group can communicate with other walkers
         mpi_nw_=multi_sim_comm.Get_size();
+        mpi_mw_=multi_sim_comm.Get_rank();
       }
       // Communicate to the other members of the same group
       // info abount number of walkers and walker index
       comm.Bcast(mpi_nw_,0);
+      comm.Bcast(mpi_mw_,0);
     }
   }
 
@@ -734,9 +906,73 @@ MetaD::MetaD(const ActionOptions& ao):
   addComponent("work"); componentIsNotPeriodic("work");
 
   if(acceleration) {
-    if(!welltemp_) error("The calculation of the acceleration works only if Well-Tempered Metadynamics is on");
+    if (kbt_ == 0.0) {
+      error("The calculation of the acceleration works only if simulation temperature has been defined");
+    }
     log.printf("  calculation on the fly of the acceleration factor");
     addComponent("acc"); componentIsNotPeriodic("acc");
+    // Set the initial value of the the acceleration.
+    // If this is not a restart, set to 1.0.
+    if (acc_rfilename.length() == 0) {
+      getPntrToComponent("acc")->set(1.0);
+      // Otherwise, read and set the restart value.
+    } else {
+      // Restart of acceleration does not make sense if the restart timestep is zero.
+      //if (getStep() == 0) {
+      //  error("Restarting calculation of acceleration factors works only if simulation timestep is restarted correctly");
+      //}
+      // Open the ACCELERATION_RFILE.
+      IFile acc_rfile;
+      acc_rfile.link(*this);
+      if(acc_rfile.FileExist(acc_rfilename)) {
+        acc_rfile.open(acc_rfilename);
+      } else {
+        error("The ACCELERATION_RFILE file you want to read: " + acc_rfilename + ", cannot be found!");
+      }
+      // Read the file to find the restart acceleration.
+      double acc_rmean;
+      double acc_rtime;
+      std::string acclabel = getLabel() + ".acc";
+      acc_rfile.allowIgnoredFields();
+      while(acc_rfile.scanField("time", acc_rtime)) {
+        acc_rfile.scanField(acclabel, acc_rmean);
+        acc_rfile.scanField();
+      }
+      acc_rfile.close();
+      acc_restart_mean_ = acc_rmean;
+      // Set component based on the read values.
+      getPntrToComponent("acc")->set(acc_rmean);
+    }
+  }
+  if (calc_max_bias_) {
+    if (!grid_) error("Calculating the maximum bias on the fly works only with a grid");
+    log.printf("  calculation on the fly of the maximum bias max(V(s,t)) \n");
+    addComponent("maxbias");
+    componentIsNotPeriodic("maxbias");
+  }
+  if (calc_transition_bias_) {
+    if (!grid_) error("Calculating the transition bias on the fly works only with a grid");
+    log.printf("  calculation on the fly of the transition bias V*(t)\n");
+    addComponent("transbias");
+    componentIsNotPeriodic("transbias");
+    log.printf("  Number of transition wells %d\n", transitionwells_.size());
+    if (transitionwells_.size() == 0) error("Calculating the transition bias on the fly requires definition of at least one transition well");
+    // Check that a grid is in use.
+    if (!grid_) error(" transition barrier finding requires a grid for the bias");
+    // Log the wells and check that they are in the grid.
+    for (unsigned i = 0; i < transitionwells_.size(); i++) {
+      // Log the coordinate.
+      log.printf("  Transition well %d at coordinate ", i);
+      for (unsigned j = 0; j < getNumberOfArguments(); j++) log.printf("%f ", transitionwells_[i][j]);
+      log.printf("\n");
+      // Check that the coordinate is in the grid.
+      for (unsigned j = 0; j < getNumberOfArguments(); j++) {
+        double max, min;
+        Tools::convert(gmin[j], min);
+        Tools::convert(gmax[j], max);
+        if (transitionwells_[i][j] < min || transitionwells_[i][j] > max) error(" transition well is not in grid");
+      }
+    }
   }
 
   // for performance
@@ -762,8 +998,10 @@ MetaD::MetaD(const ActionOptions& ao):
     std::vector<std::string> actualmin=BiasGrid_->getMin();
     std::vector<std::string> actualmax=BiasGrid_->getMax();
     for(unsigned i=0; i<getNumberOfArguments(); i++) {
-      if(gmin[i]!=actualmin[i]) log<<"  WARNING: GRID_MIN["<<i<<"] has been adjusted to "<<actualmin[i]<<" to fit periodicity\n";
-      if(gmax[i]!=actualmax[i]) log<<"  WARNING: GRID_MAX["<<i<<"] has been adjusted to "<<actualmax[i]<<" to fit periodicity\n";
+      std::string is;
+      Tools::convert(i,is);
+      if(gmin[i]!=actualmin[i]) error("GRID_MIN["+is+"] must be adjusted to "+actualmin[i]+" to fit periodicity");
+      if(gmax[i]!=actualmax[i]) error("GRID_MAX["+is+"] must be adjusted to "+actualmax[i]+" to fit periodicity");
     }
   }
 
@@ -821,11 +1059,22 @@ MetaD::MetaD(const ActionOptions& ao):
   // open all files at the beginning and read Gaussians if restarting
   for(int i=0; i<mw_n_; ++i) {
     string fname;
-    if(mw_n_>1) {
-      stringstream out; out << i;
-      fname = mw_dir_+"/"+hillsfname+"."+out.str();
+    if(mw_dir_!="") {
+      if(mw_n_>1) {
+        stringstream out; out << i;
+        fname = mw_dir_+"/"+hillsfname+"."+out.str();
+      } else if(walkers_mpi) {
+        fname = mw_dir_+"/"+hillsfname;
+      } else {
+        fname = hillsfname;
+      }
     } else {
-      fname = hillsfname;
+      if(mw_n_>1) {
+        stringstream out; out << i;
+        fname = hillsfname+"."+out.str();
+      } else {
+        fname = hillsfname;
+      }
     }
     IFile *ifile = new IFile();
     ifile->link(*this);
@@ -865,6 +1114,15 @@ MetaD::MetaD(const ActionOptions& ao):
 
   // Calculate the Tiwary-Parrinello reweighting factor if we are restarting from previous hills
   if(getRestart() && rewf_grid_.size()>0 ) computeReweightingFactor();
+  // Calculate all special bias quantities desired if restarting with nonzero bias.
+  if(getRestart() && calc_max_bias_) {
+    max_bias_ = BiasGrid_->getMaxValue();
+    getPntrToComponent("maxbias")->set(max_bias_);
+  }
+  if(getRestart() && calc_transition_bias_) {
+    transition_bias_ = getTransitionBarrierBias();
+    getPntrToComponent("transbias")->set(transition_bias_);
+  }
 
   // open grid file for writing
   if(wgridstride_>0) {
@@ -903,12 +1161,23 @@ MetaD::MetaD(const ActionOptions& ao):
 
   bool concurrent=false;
   const ActionSet&actionSet(plumed.getActionSet());
-  for(ActionSet::const_iterator p=actionSet.begin(); p!=actionSet.end(); ++p) if(dynamic_cast<MetaD*>(*p)) { concurrent=true; break; }
+  for(const auto & p : actionSet) if(dynamic_cast<MetaD*>(p)) { concurrent=true; break; }
   if(concurrent) log<<"  You are using concurrent metadynamics\n";
+  if(rect_biasf_.size()>0) {
+    if(walkers_mpi) {
+      log<<"  You are using RECT in its 'altruistic' implementation\n";
+    }{
+      log<<"  You are using RECT\n";
+    }
+  }
 
   log<<"  Bibliography "<<plumed.cite("Laio and Parrinello, PNAS 99, 12562 (2002)");
   if(welltemp_) log<<plumed.cite(
                        "Barducci, Bussi, and Parrinello, Phys. Rev. Lett. 100, 020603 (2008)");
+  if(tt_specs_.is_active) {
+    log << plumed.cite("Dama, Rotskoff, Parrinello, and Voth, J. Chem. Theory Comput. 10, 3626 (2014)");
+    log << plumed.cite("Dama, Parrinello, and Voth, Phys. Rev. Lett. 112, 240602 (2014)");
+  }
   if(mw_n_>1||walkers_mpi) log<<plumed.cite(
                                   "Raiteri, Laio, Gervasio, Micheletti, and Parrinello, J. Phys. Chem. B 110, 3533 (2006)");
   if(adaptive_!=FlexibleBin::none) log<<plumed.cite(
@@ -919,14 +1188,45 @@ MetaD::MetaD(const ActionOptions& ao):
                           "Pratyush and Parrinello, Phys. Rev. Lett. 111, 230602 (2013)");
   if(rewf_grid_.size()>0) log<<plumed.cite(
                                  "Pratyush and Parrinello, J. Phys. Chem. B, 119, 736 (2015)");
-  if(concurrent) log<<plumed.cite(
-                        "Gil-Ley and Bussi, J. Chem. Theory Comput. 11, 1077 (2015)");
+  if(concurrent || rect_biasf_.size()>0) log<<plumed.cite(
+          "Gil-Ley and Bussi, J. Chem. Theory Comput. 11, 1077 (2015)");
+  if(rect_biasf_.size()>0 && walkers_mpi) log<<plumed.cite(
+          "Hosek, Toulcova, Bortolato, and Spiwok, J. Phys. Chem. B 120, 2209 (2016)");
   if(targetfilename_.length()>0) {
     log<<plumed.cite("White, Dama, and Voth, J. Chem. Theory Comput. 11, 2451 (2015)");
-    log<<plumed.cite("Marinelli and Faraldo-Gómez,  Biophys. J. 108, 2779 (2015)");
+    log<<plumed.cite("Marinelli and Faraldo-Gómez,  Biophys. J. 108, 2779 (2015)");
     log<<plumed.cite("Gil-Ley, Bottaro, and Bussi, submitted (2016)");
   }
   log<<"\n";
+}
+
+void MetaD::readTemperingSpecs(TemperingSpecs &t_specs) {
+  // Set global tempering parameters.
+  parse(t_specs.name_stem + "BIASFACTOR", t_specs.biasf);
+  if (t_specs.biasf != -1.0) {
+    if (kbt_ == 0.0) {
+      error("Unless the MD engine passes the temperature to plumed, with tempered metad you must specify it using TEMP");
+    }
+    if (t_specs.biasf == 1.0) {
+      error("A bias factor of 1 corresponds to zero delta T and zero hill size, so it is not allowed.");
+    }
+    t_specs.is_active = true;
+    parse(t_specs.name_stem + "BIASTHRESHOLD", t_specs.threshold);
+    if (t_specs.threshold < 0.0) {
+      error(t_specs.name + " bias threshold is nonsensical");
+    }
+    parse(t_specs.name_stem + "ALPHA", t_specs.alpha);
+    if (t_specs.alpha <= 0.0 || t_specs.alpha > 1.0) {
+      error(t_specs.name + " decay shape parameter alpha is nonsensical");
+    }
+  }
+}
+
+void MetaD::logTemperingSpecs(const TemperingSpecs &t_specs) {
+  log.printf("  %s bias factor %f\n", t_specs.name.c_str(), t_specs.biasf);
+  log.printf("  KbT %f\n", kbt_);
+  if (t_specs.threshold != 0.0) log.printf("  %s bias threshold %f\n", t_specs.name.c_str(), t_specs.threshold);
+  if (t_specs.alpha != 1.0) log.printf("  %s decay shape parameter alpha %f\n", t_specs.name.c_str(), t_specs.alpha);
 }
 
 void MetaD::readGaussians(IFile *ifile)
@@ -944,7 +1244,8 @@ void MetaD::readGaussians(IFile *ifile)
   while(scanOneHill(ifile,tmpvalues,center,sigma,height,multivariate)) {
     ;
     nhills++;
-    if(welltemp_) {height*=(biasf_-1.0)/biasf_;}
+// note that for gamma=1 we store directly -F
+    if(welltemp_ && biasf_>1.0) {height*=(biasf_-1.0)/biasf_;}
     addGaussian(Gaussian(center,sigma,height,multivariate));
   }
   log.printf("      %d Gaussians read\n",nhills);
@@ -963,7 +1264,8 @@ bool MetaD::readChunkOfGaussians(IFile *ifile, unsigned n)
 
   while(scanOneHill(ifile,tmpvalues,center,sigma,height,multivariate)) {
     ;
-    if(welltemp_) height*=(biasf_-1.0)/biasf_;
+// note that for gamma=1 we store directly -F
+    if(welltemp_ && biasf_>1.0) height*=(biasf_-1.0)/biasf_;
     addGaussian(Gaussian(center,sigma,height,multivariate));
     if(nhills==n) {
       log.printf("      %u Gaussians read\n",nhills);
@@ -1018,7 +1320,8 @@ void MetaD::writeGaussian(const Gaussian& hill, OFile&file)
       file.printField("sigma_"+getPntrToArgument(i)->getName(),hill.sigma[i]);
   }
   double height=hill.height;
-  if(welltemp_) height*=biasf_/(biasf_-1.0);
+// note that for gamma=1 we store directly -F
+  if(welltemp_ && biasf_>1.0) height*=biasf_/(biasf_-1.0);
   file.printField("height",height).printField("biasf",biasf_);
   if(mw_n_>1) file.printField("clock",int(std::time(0)));
   file.printField();
@@ -1131,8 +1434,6 @@ double MetaD::getBiasAndDerivatives(const vector<double>& cv, double* der)
     unsigned rank=comm.Get_rank();
     for(unsigned i=rank; i<hills_.size(); i+=stride) {
       bias+=evaluateGaussian(cv,hills_[i],der);
-      //finite difference test
-      //finiteDifferenceGaussian(cv,hills_[i]);
     }
     comm.Sum(bias);
     if(der) comm.Sum(der,getNumberOfArguments());
@@ -1252,18 +1553,35 @@ double MetaD::getHeight(const vector<double>& cv)
   double height=height0_;
   if(welltemp_) {
     double vbias = getBiasAndDerivatives(cv);
-    height = height0_*exp(-vbias/(kbt_*(biasf_-1.0)));
+    if(biasf_>1.0) {
+      height = height0_*exp(-vbias/(kbt_*(biasf_-1.0)));
+    } else {
+      // notice that if gamma=1 we store directly -F
+      height = height0_*exp(-vbias/kbt_);
+    }
   }
   if(dampfactor_>0.0) {
     plumed_assert(BiasGrid_);
     double m=BiasGrid_->getMaxValue();
     height*=exp(-m/(kbt_*(dampfactor_)));
   }
+  if (tt_specs_.is_active) {
+    double vbarrier = transition_bias_;
+    temperHeight(height, tt_specs_, vbarrier);
+  }
   if(TargetGrid_) {
     double f=TargetGrid_->getValue(cv)-TargetGrid_->getMaxValue();
     height*=exp(f/kbt_);
   }
   return height;
+}
+
+void MetaD::temperHeight(double &height, const TemperingSpecs &t_specs, const double tempering_bias) {
+  if (t_specs.alpha == 1.0) {
+    height *= exp(-max(0.0, tempering_bias - t_specs.threshold) / (kbt_ * (t_specs.biasf - 1.0)));
+  } else {
+    height *= pow(1 + (1 - t_specs.alpha) / t_specs.alpha * max(0.0, tempering_bias - t_specs.threshold) / (kbt_ * (t_specs.biasf - 1.0)), - t_specs.alpha / (1 - t_specs.alpha));
+  }
 }
 
 void MetaD::calculate()
@@ -1279,15 +1597,24 @@ void MetaD::calculate()
     cv[i]=getArgument(i);
     der[i]=0.;
   }
-  const double ene = getBiasAndDerivatives(cv,der);
+  double ene = getBiasAndDerivatives(cv,der);
+// special case for gamma=1.0
+  if(biasf_==1.0) {
+    ene=0.0;
+    for(unsigned i=0; i<getNumberOfArguments(); ++i) {der[i]=0.0;}
+  }
+
   setBias(ene);
   if( rewf_grid_.size()>0 ) getPntrToComponent("rbias")->set(ene - reweight_factor);
   // calculate the acceleration factor
   if(acceleration&&!isFirstStep) {
-    acc += exp(ene/(kbt_));
+    acc += static_cast<double>(getStride()) * exp(ene/(kbt_));
     const double mean_acc = acc/((double) getStep());
     getPntrToComponent("acc")->set(mean_acc);
+  } else if (acceleration && isFirstStep && acc_restart_mean_ > 0.0) {
+    acc = acc_restart_mean_ * static_cast<double>(getStep());
   }
+
   getPntrToComponent("work")->set(work_);
   // set Forces
   for(unsigned i=0; i<ncv; ++i) {
@@ -1340,7 +1667,8 @@ void MetaD::update() {
         // Communicate (only root)
         multi_sim_comm.Allgather(cv,all_cv);
         multi_sim_comm.Allgather(thissigma,all_sigma);
-        multi_sim_comm.Allgather(height,all_height);
+// notice that if gamma=1 we store directly -F so this scaling is not necessary:
+        multi_sim_comm.Allgather(height*(biasf_>1.0?biasf_/(biasf_-1.0):1.0),all_height);
         multi_sim_comm.Allgather(int(multivariate),all_multivariate);
       }
       // Share info with group members
@@ -1354,7 +1682,8 @@ void MetaD::update() {
         std::vector<double> sigma_now(thissigma.size());
         for(unsigned j=0; j<cv.size(); j++) cv_now[j]=all_cv[i*cv.size()+j];
         for(unsigned j=0; j<thissigma.size(); j++) sigma_now[j]=all_sigma[i*thissigma.size()+j];
-        Gaussian newhill=Gaussian(cv_now,sigma_now,all_height[i],all_multivariate[i]);
+// notice that if gamma=1 we store directly -F so this scaling is not necessary:
+        Gaussian newhill=Gaussian(cv_now,sigma_now,all_height[i]*(biasf_>1.0?(biasf_-1.0)/biasf_:1.0),all_multivariate[i]);
         addGaussian(newhill);
         writeGaussian(newhill,hillsOfile_);
       }
@@ -1420,34 +1749,17 @@ void MetaD::update() {
       }
     }
   }
+  // Recalculate special bias quantities whenever the bias has been changed by the update.
+  bool bias_has_changed = (nowAddAHill || (mw_n_ > 1 && getStep() % mw_rstride_ == 0));
   if(getStep()%(stride_*rewf_ustride_)==0 && nowAddAHill && rewf_grid_.size()>0 ) computeReweightingFactor();
-}
-
-void MetaD::finiteDifferenceGaussian(const vector<double>& cv, const Gaussian& hill)
-{
-  log<<"--------- finiteDifferenceGaussian: size "<<cv.size() <<"------------\n";
-  // for each cv
-  // first get the bias and the derivative
-  vector<double> oldder(cv.size());
-  vector<double> der(cv.size());
-  vector<double> mycv(cv.size());
-  mycv=cv;
-  double step=1.e-6;
-  Random random;
-  // just displace a tiny bit
-  for(unsigned i=0; i<cv.size(); i++) log<<"CV "<<i<<" V "<<mycv[i]<<"\n";
-  for(unsigned i=0; i<cv.size(); i++) mycv[i]+=1.e-2*2*(random.RandU01()-0.5);
-  for(unsigned i=0; i<cv.size(); i++) log<<"NENEWWCV "<<i<<" V "<<mycv[i]<<"\n";
-  double oldbias=evaluateGaussian(mycv,hill,&oldder[0]);
-  for(unsigned i=0; i<mycv.size(); i++) {
-    double delta=step*2*(random.RandU01()-0.5);
-    mycv[i]+=delta;
-    double newbias=evaluateGaussian(mycv,hill,&der[0]);
-    log<<"CV "<<i;
-    log<<" ANAL "<<oldder[i]<<" NUM "<<(newbias-oldbias)/delta<<" DIFF "<<(oldder[i]-(newbias-oldbias)/delta)<<"\n";
-    mycv[i]-=delta;
+  if (calc_max_bias_ && bias_has_changed) {
+    max_bias_ = BiasGrid_->getMaxValue();
+    getPntrToComponent("maxbias")->set(max_bias_);
   }
-  log<<"--------- END finiteDifferenceGaussian ------------\n";
+  if (calc_transition_bias_ && (nowAddAHill || (mw_n_ > 1 && getStep() % mw_rstride_ == 0))) {
+    transition_bias_ = getTransitionBarrierBias();
+    getPntrToComponent("transbias")->set(transition_bias_);
+  }
 }
 
 /// takes a pointer to the file and a template string with values v and gives back the next center, sigma and height
@@ -1521,6 +1833,12 @@ void MetaD::computeReweightingFactor()
 {
   if( !welltemp_ ) error("cannot compute the c(t) reweighting factors for non well-tempered metadynamics");
 
+  if(biasf_==1.0) {
+// in this case we have no bias, so reweight factor is 1.0
+    getPntrToComponent("rct")->set(1.0);
+    return;
+  }
+
   // Recover the minimum values for the grid
   unsigned ncv=getNumberOfArguments();
   unsigned ntotgrid=1;
@@ -1554,6 +1872,40 @@ void MetaD::computeReweightingFactor()
   comm.Sum( sum1 ); comm.Sum( sum2 );
   reweight_factor = kbt_ * std::log( sum1/sum2 );
   getPntrToComponent("rct")->set(reweight_factor);
+}
+
+double MetaD::getTransitionBarrierBias() {
+
+  // If there is only one well of interest, return the bias at that well point.
+  if (transitionwells_.size() == 1) {
+    double tb_bias = getBiasAndDerivatives(transitionwells_[0], NULL);
+    return tb_bias;
+
+    // Otherwise, check for the least barrier bias between all pairs of wells.
+    // Note that because the paths can be considered edges between the wells' nodes
+    // to make a graph and the path barriers satisfy certain cycle inequalities, it
+    // is sufficient to look at paths corresponding to a minimal spanning tree of the
+    // overall graph rather than examining every edge in the graph.
+    // For simplicity, I chose the star graph with center well 0 as the spanning tree.
+    // It is most efficient to start the path searches from the wells that are
+    // expected to be sampled last, so transitionwell_[0] should correspond to the
+    // starting well. With this choice the searches will terminate in one step until
+    // transitionwell_[1] is sampled.
+  } else {
+    double least_transition_bias, curr_transition_bias;
+    vector<double> sink = transitionwells_[0];
+    vector<double> source = transitionwells_[1];
+    least_transition_bias = BiasGrid_->findMaximalPathMinimum(source, sink);
+    for (unsigned i = 2; i < transitionwells_.size(); i++) {
+      if (least_transition_bias == 0.0) {
+        break;
+      }
+      source = transitionwells_[i];
+      curr_transition_bias = BiasGrid_->findMaximalPathMinimum(source, sink);
+      least_transition_bias = fmin(curr_transition_bias, least_transition_bias);
+    }
+    return least_transition_bias;
+  }
 }
 
 }

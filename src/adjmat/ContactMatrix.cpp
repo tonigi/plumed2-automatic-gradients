@@ -48,11 +48,11 @@ The input shown below calculates a \f$6 \times 6\f$ matrix whose elements are eq
 of each other and which is zero otherwise.  The columns in this matrix are then summed so as to give the coordination number for each atom.
 The final quantity output in the colvar file is thus the average coordination number.
 
-\verbatim
+\plumedfile
 aa: CONTACT_MATRIX ATOMS=1-6 SWITCH={EXP D_0=0.2 R_0=0.1 D_MAX=0.66}
 COLUMNSUMS MATRIX=mat MEAN LABEL=csums
 PRINT ARG=csums.* FILE=colvar
-\endverbatim
+\endplumedfile
 
 */
 //+ENDPLUMEDOC
@@ -135,11 +135,10 @@ double ContactMatrix::calculateWeight( const unsigned& taskCode, const double& w
 
 double ContactMatrix::compute( const unsigned& tindex, multicolvar::AtomValuePack& myatoms ) const {
   Vector distance = getSeparation( myatoms.getPosition(0), myatoms.getPosition(1) );
-  double dfunc, sw = switchingFunction( getBaseColvarNumber( myatoms.getIndex(0) ), getBaseColvarNumber( myatoms.getIndex(1) ) - ncol_t ).calculate( distance.modulo(), dfunc );
+  double dfunc;
+  double sw = switchingFunction( getBaseColvarNumber( myatoms.getIndex(0) ), getBaseColvarNumber( myatoms.getIndex(1) ) - ncol_t ).calculate( distance.modulo(), dfunc );
 
   if( !doNotCalculateDerivatives() ) {
-    Vector distance = getSeparation( myatoms.getPosition(0), myatoms.getPosition(1) );
-    double dfunc, sw = switchingFunction( getBaseColvarNumber( myatoms.getIndex(0) ), getBaseColvarNumber( myatoms.getIndex(1) ) - ncol_t ).calculate( distance.modulo(), dfunc );
     addAtomDerivatives( 1, 0, (-dfunc)*distance, myatoms );
     addAtomDerivatives( 1, 1, (+dfunc)*distance, myatoms );
     myatoms.addBoxDerivatives( 1, (-dfunc)*Tensor(distance,distance) );

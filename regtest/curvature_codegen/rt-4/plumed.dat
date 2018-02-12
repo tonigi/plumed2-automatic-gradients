@@ -1,0 +1,13 @@
+# Testing singularities. First frame is at the straight line. Tenth frame is at 90 deg.,
+# where the gradient on the central atom is null.
+
+r:  CURVATURE_CODEGEN ATOMS=1,2,3
+ir: CURVATURE_CODEGEN ATOMS=1,2,3 INVERSE
+
+PRINT FILE=COLVAR ARG=* FMT=%8.4f
+
+DUMPDERIVATIVES ARG=r  FILE=GRADIENT_r  FMT=%8.4f
+DUMPDERIVATIVES ARG=ir FILE=GRADIENT_ir FMT=%8.4f
+
+
+ENDPLUMED

@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2016 The plumed team
+   Copyright (c) 2016,2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -32,8 +32,10 @@ public:
   static void registerKeywords( Keywords& keys );
   explicit AverageOnGrid( const vesselbase::VesselOptions& da );
   void accumulate( const unsigned& ipoint, const double& weight, const double& dens, const std::vector<double>& der, std::vector<double>& buffer ) const ;
+  void accumulateForce( const unsigned& ipoint, const double& weight, const std::vector<double>& der, std::vector<double>& intforce ) const { plumed_error(); }
   double getGridElement( const unsigned& ipoint, const unsigned& jelement ) const ;
   unsigned getNumberOfComponents() const ;
+  void getFinalForces( const std::vector<double>& buffer, std::vector<double>& finalForces ) { plumed_error(); }
 };
 
 inline

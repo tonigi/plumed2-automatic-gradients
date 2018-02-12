@@ -28,7 +28,7 @@
 #include <vector>
 #include <set>
 #include <stack>
-
+#include <map>
 
 // !!!!!!!!!!!!!!!!!!!!!!    DANGER   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11
 // THE FOLLOWING ARE DEFINITIONS WHICH ARE NECESSARY FOR DYNAMIC LOADING OF THE PLUMED KERNEL:
@@ -104,6 +104,10 @@ private:
 /// Name of the input file
   std::string plumedDat;
 
+/// End of input file.
+/// Set to true to terminate reading
+  bool endPlumed;
+
 /// Object containing information about atoms (such as positions,...).
   Atoms&    atoms;           // atomic coordinates
 
@@ -137,7 +141,6 @@ private:
   bool doCheckPoint;
 
   std::set<FileBase*> files;
-  typedef std::set<FileBase*>::iterator files_iterator;
 
 /// Stuff to make plumed stop the MD code cleanly
   int* stopFlag;
@@ -153,6 +156,10 @@ public:
 
 /// Flag to switch on detailed timers
   bool detailedTimers;
+
+/// Generic map string -> double
+/// intended to pass information across Actions
+  std::map<std::string,double> passMap;
 
 /// Add a citation, returning a string containing the reference number, something like "[10]"
   std::string cite(const std::string&);
@@ -331,6 +338,8 @@ public:
   void updateFlagsPop();
 /// Get top of update flags
   bool updateFlagsTop();
+/// Set end of input file
+  void setEndPlumed();
 };
 
 /////
@@ -394,6 +403,11 @@ void PlumedMain::updateFlagsPop() {
 inline
 bool PlumedMain::updateFlagsTop() {
   return updateFlags.top();
+}
+
+inline
+void PlumedMain::setEndPlumed() {
+  endPlumed=true;
 }
 
 }

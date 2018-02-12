@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2014-2017 The plumed team
+   Copyright (c) 2015-2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -20,6 +20,7 @@
    along with plumed.  If not, see <http://www.gnu.org/licenses/>.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 #include "ClusteringBase.h"
+#include "AdjacencyMatrixBase.h"
 #include "AdjacencyMatrixVessel.h"
 
 namespace PLMD {
@@ -46,7 +47,9 @@ ClusteringBase::ClusteringBase(const ActionOptions&ao):
 
 void ClusteringBase::turnOnDerivatives() {
   // Check base multicolvar isn't density probably other things shouldn't be allowed here as well
-  if( getBaseMultiColvar(0)->isDensity() ) error("DFS clustering cannot be differentiated if base multicolvar is DENSITY");
+  if( (getAdjacencyVessel()->getMatrixAction())->getNumberOfBaseMultiColvars()>0 ) {
+    if( getBaseMultiColvar(0)->isDensity() ) error("DFS clustering cannot be differentiated if base multicolvar is DENSITY");
+  }
 
   // Ensure that derivatives are turned on in base classes
   ActionWithInputMatrix::turnOnDerivatives();

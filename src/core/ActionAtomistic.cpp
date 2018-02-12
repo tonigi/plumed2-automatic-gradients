@@ -77,7 +77,8 @@ void ActionAtomistic::requestAtoms(const vector<AtomNumber> & a) {
 // only real atoms are requested to lower level Atoms class
     else unique.insert(indexes[i]);
   }
-
+  updateUniqueLocal();
+  atoms.unique.clear();
 }
 
 Vector ActionAtomistic::pbcDistance(const Vector &v1,const Vector &v2)const {
@@ -188,7 +189,7 @@ void ActionAtomistic::interpretAtomList( std::vector<std::string>& strings, std:
 // here we check if the atom name is the name of a group
     if(!ok) {
       if(atoms.groups.count(strings[i])) {
-        map<string,vector<AtomNumber> >::const_iterator m=atoms.groups.find(strings[i]);
+        const auto m=atoms.groups.find(strings[i]);
         t.insert(t.end(),m->second.begin(),m->second.end());
         ok=true;
       }
@@ -196,8 +197,8 @@ void ActionAtomistic::interpretAtomList( std::vector<std::string>& strings, std:
 // here we check if the atom name is the name of an added virtual atom
     if(!ok) {
       const ActionSet&actionSet(plumed.getActionSet());
-      for(ActionSet::const_iterator a=actionSet.begin(); a!=actionSet.end(); ++a) {
-        ActionWithVirtualAtom* c=dynamic_cast<ActionWithVirtualAtom*>(*a);
+      for(const auto & a : actionSet) {
+        ActionWithVirtualAtom* c=dynamic_cast<ActionWithVirtualAtom*>(a);
         if(c) if(c->getLabel()==strings[i]) {
             ok=true;
             t.push_back(c->getIndex());
@@ -279,6 +280,17 @@ void ActionAtomistic::makeWhole() {
     const Vector & first (positions[j]);
     Vector & second (positions[j+1]);
     second=first+pbcDistance(first,second);
+  }
+}
+
+void ActionAtomistic::updateUniqueLocal() {
+  unique_local.clear();
+  if(atoms.dd && atoms.shuffledAtoms>0) {
+    for(auto pp=unique.begin(); pp!=unique.end(); ++pp) {
+      if(atoms.dd.g2l[pp->index()]>=0) unique_local.insert(*pp);
+    }
+  } else {
+    unique_local.insert(unique.begin(),unique.end());
   }
 }
 

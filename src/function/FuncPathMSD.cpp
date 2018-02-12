@@ -49,23 +49,23 @@ It is a function of MSD that are obtained by the joint use of MSD variable and S
 Here below is a case where you have defined three frames and you want to
 calculate the progress alng the path and the distance from it in p1
 
-\verbatim
+\plumedfile
 t1: RMSD REFERENCE=frame_1.dat TYPE=OPTIMAL SQUARED
 t2: RMSD REFERENCE=frame_21.dat TYPE=OPTIMAL SQUARED
 t3: RMSD REFERENCE=frame_42.dat TYPE=OPTIMAL SQUARED
 p1: FUNCPATHMSD ARG=t1,t2,t3 LAMBDA=500.0
 PRINT ARG=t1,t2,t3,p1.s,p1.z STRIDE=1 FILE=colvar FMT=%8.4f
-\endverbatim
+\endplumedfile
 
 In this second example is shown how to define a PATH in the \ref CONTACTMAP space:
 
-\verbatim
+\plumedfile
 CONTACTMAP ...
 ATOMS1=1,2 REFERENCE1=0.1
 ATOMS2=3,4 REFERENCE2=0.5
 ATOMS3=4,5 REFERENCE3=0.25
 ATOMS4=5,6 REFERENCE4=0.0
-SWITCH=(RATIONAL R_0=1.5)
+SWITCH={RATIONAL R_0=1.5}
 LABEL=c1
 CMDIST
 ... CONTACTMAP
@@ -75,7 +75,7 @@ ATOMS1=1,2 REFERENCE1=0.3
 ATOMS2=3,4 REFERENCE2=0.9
 ATOMS3=4,5 REFERENCE3=0.45
 ATOMS4=5,6 REFERENCE4=0.1
-SWITCH=(RATIONAL R_0=1.5)
+SWITCH={RATIONAL R_0=1.5}
 LABEL=c2
 CMDIST
 ... CONTACTMAP
@@ -85,14 +85,14 @@ ATOMS1=1,2 REFERENCE1=1.0
 ATOMS2=3,4 REFERENCE2=1.0
 ATOMS3=4,5 REFERENCE3=1.0
 ATOMS4=5,6 REFERENCE4=1.0
-SWITCH=(RATIONAL R_0=1.5)
+SWITCH={RATIONAL R_0=1.5}
 LABEL=c3
 CMDIST
 ... CONTACTMAP
 
 p1: FUNCPATHMSD ARG=c1,c2,c3 LAMBDA=500.0
 PRINT ARG=c1,c2,c3,p1.s,p1.z STRIDE=1 FILE=colvar FMT=%8.4f
-\endverbatim
+\endplumedfile
 
 */
 //+ENDPLUMEDOC
@@ -124,10 +124,9 @@ class FuncPathMSD : public Function {
     }
     // now sort according the second value
     sort(order.begin(), order.end(), ordering());
-    typedef vector< pair<unsigned, myiter> >::const_iterator pairiter;
     vector<int> vv(v.size()); n=0;
-    for ( pairiter it = order.begin(); it != order.end(); ++it ) {
-      vv[n]=(*it).first; n++;
+    for (const auto & it : order) {
+      vv[n]=it.first; n++;
     }
     return vv;
   }
@@ -199,8 +198,8 @@ FuncPathMSD::FuncPathMSD(const ActionOptions&ao):
   // now backup the arguments
   for(unsigned i=0; i<getNumberOfArguments(); i++)allArguments.push_back(getPntrToArgument(i));
   double i=1.;
-  for(std::vector<Value*>:: const_iterator it=allArguments.begin(); it!=allArguments.end()  ; ++it) {
-    indexmap[(*it)]=i; i+=1.;
+  for(const auto & it : allArguments) {
+    indexmap[it]=i; i+=1.;
   }
 
 }
@@ -217,19 +216,18 @@ void FuncPathMSD::calculate() {
   Value* val_s_path=getPntrToComponent("s");
   Value* val_z_path=getPntrToComponent("z");
 
-  typedef  vector< pair< Value *,double> >::iterator pairiter;
-  for(pairiter it=neighpair.begin(); it!=neighpair.end(); ++it) {
-    (*it).second=exp(-lambda*((*it).first->get()));
-    s_path+=(indexmap[(*it).first])*(*it).second;
-    partition+=(*it).second;
+  for(auto & it : neighpair) {
+    it.second=exp(-lambda*(it.first->get()));
+    s_path+=(indexmap[it.first])*it.second;
+    partition+=it.second;
   }
   s_path/=partition;
   val_s_path->set(s_path);
   val_z_path->set(-(1./lambda)*std::log(partition));
   int n=0;
-  for(pairiter it=neighpair.begin(); it!=neighpair.end(); ++it) {
-    double expval=(*it).second;
-    double tmp=lambda*expval*(s_path-(indexmap[(*it).first]))/partition;
+  for(const auto & it : neighpair) {
+    double expval=it.second;
+    double tmp=lambda*expval*(s_path-(indexmap[it.first]))/partition;
     setDerivative(val_s_path,n,tmp);
     setDerivative(val_z_path,n,expval/partition);
     n++;
@@ -271,13 +269,12 @@ void FuncPathMSD::prepare() {
       for(unsigned i=0; i<allArguments.size(); i++)neighpair[i].first=allArguments[i];
     }
   }
-  typedef  vector< pair<Value*,double> >::iterator pairiter;
   vector<Value*> argstocall;
 //log.printf("PREPARING \n");
   argstocall.clear();
   if(!neighpair.empty()) {
-    for(pairiter it=neighpair.begin(); it!=neighpair.end(); ++it) {
-      argstocall.push_back( (*it).first );
+    for(const auto & it : neighpair) {
+      argstocall.push_back( it.first );
       //     log.printf("CALLING %p %f ",(*it).first ,indexmap[(*it).first] );
     }
   } else {

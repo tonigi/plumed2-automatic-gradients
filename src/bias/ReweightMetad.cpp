@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2016,2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -39,12 +39,12 @@ we use reweighting into order to discount the effect of the bias from our final 
 metadynamics instead.  Notice also that we have to specify how often we would like to calculate the c(t) reweighting
 factor and the grid over which we calculate c(t) in the input to the METAD command.
 
-\verbatim
+\plumedfile
 a: ANGLE ATOMS=1,2,3
 x: DISTANCE ATOMS=1,2
 METAD ARG=x PACE=100 SIGMA=0.1 HEIGHT=1.5 BIASFACTOR=5 GRID_MIN=0 GRID_MAX=10 GRID_BIN=100 REWEIGHTING_NGRID=100 REWEIGHTING_NHILLS=50
 
-as: REWEIGHT_METAD TEMP=300
+bias: REWEIGHT_METAD TEMP=300
 
 HISTOGRAM ...
   ARG=a
@@ -57,8 +57,7 @@ HISTOGRAM ...
 ... HISTOGRAM
 
 DUMPGRID GRID=hB FILE=histoB STRIDE=1 FMT=%8.4f
-
-\endverbatim
+\endplumedfile
 
 */
 //+ENDPLUMEDOC

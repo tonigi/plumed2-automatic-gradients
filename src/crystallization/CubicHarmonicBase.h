@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2017 The plumed team
+   Copyright (c) 2016,2017 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -34,7 +34,7 @@ private:
 //  double nl_cut;
   double rcut2;
   double rotationmatrix[3][3];
-
+  bool unormalized;
   SwitchingFunction switchingFunction;
 public:
   static void registerKeywords( Keywords& keys );

@@ -109,7 +109,6 @@ void FindContourSurface::registerKeywords( Keywords& keys ) {
   ContourFindingBase::registerKeywords( keys );
   keys.add("compulsory","SEARCHDIR","In which directions do you wish to search for the contour.");
   keys.add("compulsory","BUFFER","0","number of buffer grid points around location where grid was found on last step.  If this is zero the full grid is calculated on each step");
-  keys.remove("FILE"); keys.remove("UNITS"); keys.remove("PRECISION");
 }
 
 FindContourSurface::FindContourSurface(const ActionOptions&ao):
@@ -210,7 +209,7 @@ void FindContourSurface::finishAveraging() {
 }
 
 void FindContourSurface::compute( const unsigned& current, MultiValue& myvals ) const {
-  std::vector<unsigned> neighbours; unsigned num_neighbours; unsigned nfound=0; double minv=0, minp;
+  std::vector<unsigned> neighbours; unsigned num_neighbours; unsigned nfound=0; double minv=0, minp=0;
   std::vector<unsigned> bins_n( ingrid->getNbin() ); unsigned shiftn=current;
   std::vector<unsigned> ind( ingrid->getDimension() ); std::vector<double> point( ingrid->getDimension() );
 #ifndef DNDEBUG
