@@ -8,10 +8,13 @@
 !/analysis
 !/basic
 !/crystallization
+!/dimred
 !/eds
 !/drr
+!/logmfd
 !/mapping
 !/multicolvar
+!/python
 !/secondarystructure
 !/trajectories
 !/scripts

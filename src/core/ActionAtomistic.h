@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -26,8 +26,10 @@
 #include "tools/Tensor.h"
 #include "Atoms.h"
 #include "tools/Pbc.h"
+#include "tools/ForwardDecl.h"
 #include <vector>
 #include <set>
+#include <map>
 
 namespace PLMD {
 
@@ -47,7 +49,8 @@ class ActionAtomistic :
   std::set<AtomNumber>  unique_local;
   std::vector<Vector>   positions;       // positions of the needed atoms
   double                energy;
-  Pbc&                  pbc;
+  ForwardDecl<Pbc>      pbc_fwd;
+  Pbc&                  pbc=*pbc_fwd;
   Tensor                virial;
   std::vector<double>   masses;
   bool                  chargesWereSet;
@@ -55,6 +58,10 @@ class ActionAtomistic :
 
   std::vector<Vector>   forces;          // forces on the needed atoms
   double                forceOnEnergy;
+
+  double                forceOnExtraCV;
+
+  std::string           extraCV;
 
   bool                  lockRequestAtoms; // forbid changes to request atoms
 
@@ -64,6 +71,8 @@ class ActionAtomistic :
 protected:
   Atoms&                atoms;
 
+  void setExtraCV(const std::string &name);
+
 public:
 /// Request an array of atoms.
 /// This method is used to ask for a list of atoms. Atoms
@@ -71,17 +80,20 @@ public:
 /// during the simulation, atoms will be available at the next step
 /// MAYBE WE HAVE TO FIND SOMETHING MORE CLEAR FOR DYNAMIC
 /// LISTS OF ATOMS
-  void requestAtoms(const std::vector<AtomNumber> & a);
+  void requestAtoms(const std::vector<AtomNumber> & a, const bool clearDep=true);
 /// Get position of i-th atom (access by relative index)
   const Vector & getPosition(int)const;
 /// Get position of i-th atom (access by absolute AtomNumber).
-/// With direct access to the global atom array
-  const Vector & getPosition(AtomNumber)const;
+/// With direct access to the global atom array.
+/// \warning Should be only used by actions that need to read the shared position array.
+///          This array is insensitive to local changes such as makeWhole(), numerical derivatives, etc.
+  const Vector & getGlobalPosition(AtomNumber)const;
 /// Get modifiable position of i-th atom (access by absolute AtomNumber).
-/// Should be used by action that need to modify the stored atomic coordinates
-  Vector & modifyPosition(AtomNumber);
+/// \warning Should be only used by actions that need to modify the shared position array.
+///          This array is insensitive to local changes such as makeWhole(), numerical derivatives, etc.
+  Vector & modifyGlobalPosition(AtomNumber);
 /// Get total number of atoms, including virtual ones.
-/// Can be used to make a loop on modifyPosition or getPosition(AtomNumber)
+/// Can be used to make a loop on modifyGlobalPosition or getGlobalPosition.
   unsigned getTotAtoms()const;
 /// Get modifiable force of i-th atom (access by absolute AtomNumber).
 /// \warning  Should be used by action that need to modify the stored atomic forces.
@@ -113,6 +125,8 @@ public:
   Tensor & modifyVirial();
 /// Get a reference to force on energy
   double & modifyForceOnEnergy();
+/// Get a reference to force on extraCV
+  double & modifyForceOnExtraCV();
 /// Get number of available atoms
   unsigned getNumberOfAtoms()const {return indexes.size();}
 /// Compute the pbc distance between two positions
@@ -186,12 +200,12 @@ const Vector & ActionAtomistic::getPosition(int i)const {
 }
 
 inline
-const Vector & ActionAtomistic::getPosition(AtomNumber i)const {
+const Vector & ActionAtomistic::getGlobalPosition(AtomNumber i)const {
   return atoms.positions[i.index()];
 }
 
 inline
-Vector & ActionAtomistic::modifyPosition(AtomNumber i) {
+Vector & ActionAtomistic::modifyGlobalPosition(AtomNumber i) {
   return atoms.positions[i.index()];
 }
 
@@ -257,6 +271,11 @@ double & ActionAtomistic::modifyForceOnEnergy() {
 }
 
 inline
+double & ActionAtomistic::modifyForceOnExtraCV() {
+  return forceOnExtraCV;
+}
+
+inline
 const Pbc & ActionAtomistic::getPbc() const {
   return pbc;
 }
@@ -289,6 +308,11 @@ unsigned ActionAtomistic::getTotAtoms()const {
 inline
 Pbc & ActionAtomistic::modifyGlobalPbc() {
   return atoms.pbc;
+}
+
+inline
+void ActionAtomistic::setExtraCV(const std::string &name) {
+  extraCV=name;
 }
 
 

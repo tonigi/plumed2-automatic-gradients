@@ -12,6 +12,7 @@
 !/config
 !/core
 !/crystallization
+!/dimred
 !/curvature-autodiff
 !/curvature-codegen
 !/drr
@@ -23,6 +24,7 @@
 !/isdb
 !/lapack
 !/lepton
+!/logmfd
 !/lib
 !/main
 !/maketools
@@ -30,6 +32,8 @@
 !/manyrestraints
 !/molfile
 !/multicolvar
+!/python
+!/pamm
 !/reference
 !/secondarystructure
 !/setup

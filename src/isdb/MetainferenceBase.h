@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2017 The plumed team
+   Copyright (c) 2017-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -83,6 +83,9 @@ private:
   double offset_min_;
   double offset_max_;
   double Doffset_;
+  // scale and offset regression
+  bool doregres_zero_;
+  int  nregres_zero_;
   // sigma is data uncertainty
   std::vector<double> sigma_;
   std::vector<double> sigma_min_;
@@ -164,6 +167,7 @@ private:
   void get_weights(double &fact, double &var_fact);
   void replica_averaging(const double fact, std::vector<double> &mean, std::vector<double> &dmean_b);
   void get_sigma_mean(const double fact, const double var_fact, const std::vector<double> &mean);
+  void do_regression_zero(const std::vector<double> &mean);
   void doMonteCarlo(const std::vector<double> &mean);
 
 
@@ -308,7 +312,7 @@ void MetainferenceBase::unlockRequests() {
 }
 
 inline
-void MetainferenceBase::calculateNumericalDerivatives( ActionWithValue* a ) {
+void MetainferenceBase::calculateNumericalDerivatives( ActionWithValue* a=NULL ) {
   if( getNumberOfArguments()>0 ) {
     ActionWithArguments::calculateNumericalDerivatives( a );
   }

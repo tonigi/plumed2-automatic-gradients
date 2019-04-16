@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016-2017 The VES code team
+   Copyright (c) 2016-2018 The VES code team
    (see the PEOPLE-VES file at the root of this folder for a list of names)
 
    See http://www.ves-code.org for more information.
@@ -27,6 +27,7 @@
 
 #include "core/ActionRegister.h"
 #include "core/PlumedMain.h"
+#include "core/Value.h"
 #include "tools/File.h"
 #include "tools/Grid.h"
 
@@ -67,10 +68,10 @@ VES_OUTPUT_TARGET_DISTRIBUTION ...
 \endplumedfile
 
 This input should be run through the driver by using a command similar to the
-following one where the trajectory/configuration file conf.gro is needed to
+following one where the trajectory/configuration file configuration.gro is needed to
 trick the code to exit correctly.
 \verbatim
-plumed driver --plumed plumed.dat --igro conf.gro
+plumed driver --plumed plumed.dat --igro configuration.gro
 \endverbatim
 
 */
@@ -95,7 +96,7 @@ void OutputTargetDistribution::registerKeywords(Keywords& keys) {
   keys.add("compulsory","GRID_MIN","the lower bounds for the grid");
   keys.add("compulsory","GRID_MAX","the upper bounds for the grid");
   keys.add("compulsory","GRID_BINS","the number of bins used for the grid.");
-  keys.add("optional","GRID_PERIODICITY","specfiy if the individual arguments should be made periodic (YES) or not (NO). By default all arguments are taken as not periodic.");
+  keys.add("optional","GRID_PERIODICITY","specify if the individual arguments should be made periodic (YES) or not (NO). By default all arguments are taken as not periodic.");
   keys.add("compulsory","TARGETDIST_FILE","filename of the file for writing the target distribution");
   keys.add("optional","LOG_TARGETDIST_FILE","filename of the file for writing the log of the target distribution");
   keys.add("compulsory","TARGET_DISTRIBUTION","the target distribution to be used.");
@@ -157,7 +158,7 @@ OutputTargetDistribution::OutputTargetDistribution(const ActionOptions&ao):
       arguments[i]->setNotPeriodic();
     }
     else {
-      plumed_merror("wrong value given in GRID_PERIODICITY, either specfiy YES or NO");
+      plumed_merror("wrong value given in GRID_PERIODICITY, either specify YES or NO");
     }
   }
 

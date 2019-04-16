@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -40,8 +40,7 @@ namespace generic {
 
 //+PLUMEDOC GENERIC WHOLEMOLECULES
 /*
-This action is used to rebuild molecules that can become split by the periodic
-boundary conditions.
+This action is used to rebuild molecules that can become split by the periodic boundary conditions.
 
 It is similar to the ALIGN_ATOMS keyword of plumed1, and is needed since some
 MD dynamics code (e.g. GROMACS) can break molecules during the calculation.
@@ -66,8 +65,8 @@ The way WHOLEMOLECULES modifies each of the listed entities is this:
 
 In this way, if an entity consists of a list of atoms such that consecutive atoms in the
 list are always closer than half a box side the entity will become whole.
-This can be usually achieved selecting consecute atoms (1-100), but it is also possible
-to skip some atoms, provided consecute chosen atoms are close enough.
+This can be usually achieved selecting consecutive atoms (1-100), but it is also possible
+to skip some atoms, provided consecutive chosen atoms are close enough.
 
 \par Examples
 
@@ -178,8 +177,8 @@ WholeMolecules::WholeMolecules(const ActionOptions&ao):
 void WholeMolecules::calculate() {
   for(unsigned i=0; i<groups.size(); ++i) {
     for(unsigned j=0; j<groups[i].size()-1; ++j) {
-      const Vector & first (getPosition(groups[i][j]));
-      Vector & second (modifyPosition(groups[i][j+1]));
+      const Vector & first (getGlobalPosition(groups[i][j]));
+      Vector & second (modifyGlobalPosition(groups[i][j+1]));
       second=first+pbcDistance(first,second);
     }
   }

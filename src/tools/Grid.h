@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -26,6 +26,7 @@
 #include <string>
 #include <map>
 #include <cmath>
+#include <memory>
 
 namespace PLMD {
 
@@ -76,6 +77,9 @@ public:
   typedef size_t index_t;
 // to restore old implementation (unsigned) use the following instead:
 // typedef unsigned index_t;
+/// Maximum dimension (exaggerated value).
+/// Can be used to replace local std::vectors with std::arrays (allocated on stack).
+  static constexpr size_t maxdim=64;
 private:
   double contour_location;
   std::vector<double> grid_;
@@ -92,7 +96,8 @@ protected:
   bool dospline_, usederiv_;
   std::string fmt_; // format for output
 /// get "neighbors" for spline
-  std::vector<index_t> getSplineNeighbors(const std::vector<unsigned> & indices)const;
+  void getSplineNeighbors(const std::vector<unsigned> & indices, std::vector<index_t>& neigh, unsigned& nneigh )const;
+// std::vector<index_t> getSplineNeighbors(const std::vector<unsigned> & indices)const;
 
 
 public:
@@ -117,6 +122,7 @@ public:
   std::vector<std::string> getMax() const;
 /// get bin size
   std::vector<double> getDx() const;
+  double getDx(index_t j) const ;
 /// get bin volume
   double getBinVolume() const;
 /// get number of bins
@@ -131,6 +137,8 @@ public:
   bool hasDerivatives() const {return usederiv_;}
 
 /// methods to handle grid indices
+  void getIndices(index_t index, std::vector<unsigned>& rindex) const;
+  void getIndices(const std::vector<double> & x, std::vector<unsigned>& rindex) const;
   std::vector<unsigned> getIndices(index_t index) const;
   std::vector<unsigned> getIndices(const std::vector<double> & x) const;
   index_t getIndex(const std::vector<unsigned> & indices) const;
@@ -155,11 +163,11 @@ public:
   void writeHeader(OFile& file);
 
 /// read grid from file
-  static Grid* create(const std::string&,const std::vector<Value*>&,IFile&,bool,bool,bool);
+  static std::unique_ptr<Grid> create(const std::string&,const std::vector<Value*>&,IFile&,bool,bool,bool);
 /// read grid from file and check boundaries are what is expected from input
-  static Grid* create(const std::string&,const std::vector<Value*>&, IFile&,
-                      const std::vector<std::string>&,const std::vector<std::string>&,
-                      const std::vector<unsigned>&,bool,bool,bool);
+  static std::unique_ptr<Grid> create(const std::string&,const std::vector<Value*>&, IFile&,
+                                      const std::vector<std::string>&,const std::vector<std::string>&,
+                                      const std::vector<unsigned>&,bool,bool,bool);
 /// get grid size
   virtual index_t getSize() const;
 /// get grid value

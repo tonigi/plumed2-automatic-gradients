@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016-2017 The VES code team
+   Copyright (c) 2016-2018 The VES code team
    (see the PEOPLE-VES file at the root of this folder for a list of names)
 
    See http://www.ves-code.org for more information.
@@ -366,13 +366,12 @@ void TargetDistribution::readInRestartTargetDistGrid(const std::string& grid_fna
     plumed_merror(getName()+": problem with reading previous target distribution when restarting, cannot find file " + grid_fname);
   }
   gridfile.open(grid_fname);
-  Grid* restart_grid = Grid::create("targetdist",grid_args_,gridfile,false,false,false);
+  std::unique_ptr<Grid> restart_grid = Grid::create("targetdist",grid_args_,gridfile,false,false,false);
   if(restart_grid->getSize()!=targetdist_grid_pntr_->getSize()) {
     plumed_merror(getName()+": problem with reading previous target distribution when restarting, the grid is not of the correct size!");
   }
-  VesTools::copyGridValues(restart_grid,targetdist_grid_pntr_);
+  VesTools::copyGridValues(restart_grid.get(),targetdist_grid_pntr_);
   updateLogTargetDistGrid();
-  delete restart_grid;
 }
 
 void TargetDistribution::clearLogTargetDistGrid() {

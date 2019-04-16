@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016,2017 The plumed team
+   Copyright (c) 2016-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -39,6 +39,10 @@
 //#include "tools/IFile.h"
 //#include "tools/OFile.h"
 
+// The original implementation of this method was contributed
+// by Andrea Cesari (andreacesari90@gmail.com).
+// Copyright has been then transferred to PLUMED developers
+// (see https://github.com/plumed/plumed2/blob/master/.github/CONTRIBUTING.md)
 
 using namespace std;
 
@@ -64,7 +68,7 @@ Lagrangian multipliers \f$ \lambda_{i}\f$ are updated, every PACE steps, accordi
 \f$k\f$ set the initial value of the learning rate and its units are \f$[observable]^{-2}ps^{-1}\f$. This can be set with the keyword KAPPA.
 The number of components for any KAPPA vector must be equal to the number of arguments of the action.
 
-Variable \f$ \xi_{i}(\lambda) \f$ is related to the choosen prior to model experimental errors. If a GAUSSIAN prior is used then:
+Variable \f$ \xi_{i}(\lambda) \f$ is related to the chosen prior to model experimental errors. If a GAUSSIAN prior is used then:
 \f[
 \xi_{i}(\lambda)=-\lambda_{i}\sigma^{2}
 \f]
@@ -86,7 +90,7 @@ The following input tells plumed to restrain the distance between atoms 7 and 15
 and the distance between atoms 2 and 19, at different equilibrium
 values, and to print the energy of the restraint.
 Lagrangian multiplier will be printed on a file called restraint.LAGMULT with a stride set by the variable PACE to 200ps.
-Moreover plumed will compute the average of each lagrangian multiplier in the window [TSTART,TEND] and use that to continue the simulations with fixed Lagrangian multipliers.
+Moreover plumed will compute the average of each Lagrangian multiplier in the window [TSTART,TEND] and use that to continue the simulations with fixed Lagrangian multipliers.
 \plumedfile
 DISTANCE ATOMS=7,15 LABEL=d1
 DISTANCE ATOMS=2,19 LABEL=d2
@@ -160,7 +164,6 @@ class MaxEnt : public Bias {
   int myrep,nrep;
 public:
   explicit MaxEnt(const ActionOptions&);
-  ~MaxEnt();
   void calculate();
   void update();
   void update_lambda();
@@ -180,25 +183,25 @@ void MaxEnt::registerKeywords(Keywords& keys) {
   keys.add("compulsory","KAPPA","0.0","specifies the initial value for the learning rate");
   keys.add("compulsory","TAU","Specify the dumping time for the learning rate.");
   keys.add("compulsory","TYPE","specify the restraint type. "
-           "EQAUL to restrain the variable at a given equilibrium value"
-           "INEQUAL< to restrain the variable to be smaller than a given value"
+           "EQUAL to restrain the variable at a given equilibrium value "
+           "INEQUAL< to restrain the variable to be smaller than a given value "
            "INEQUAL> to restrain the variable to be greater than a given value");
   keys.add("optional","ERROR_TYPE","specify the prior on the error to use."
-           "GAUSSIAN: use a Gaussian prior"
+           "GAUSSIAN: use a Gaussian prior "
            "LAPLACE: use a Laplace prior");
-  keys.add("optional","TSTART","time in ps from where to start averaging the Lagrangian multiplier. By default no average is computed, hence lambda is updated every PACE steps");
+  keys.add("optional","TSTART","time from where to start averaging the Lagrangian multiplier. By default no average is computed, hence lambda is updated every PACE steps");
   keys.add("optional","TEND","time in ps where to stop to compute the average of Lagrangian multiplier. From this time until the end of the simulation Lagrangian multipliers are kept fix to the average computed between TSTART and TEND;");
   keys.add("optional","ALPHA","default=1.0; To be used with LAPLACE KEYWORD, allows to choose a prior function proportional to a Gaussian times an exponential function. ALPHA=1 correspond to the LAPLACE prior.");
   keys.add("compulsory","AT","the position of the restraint");
-  keys.add("optional","SIGMA","The typical erros expected on observable");
+  keys.add("optional","SIGMA","The typical errors expected on observable");
   keys.add("optional","FILE","Lagrangian multipliers output file. The default name is: label name followed by the string .LAGMULT ");
   keys.add("optional","LEARN_REPLICA","In a multiple replica environment specify which is the reference replica. By default replica 0 will be used.");
-  keys.add("optional","APPLY_WEIGHTS","Vector of weights containing 1 in correspondece of each replica that will receive the lagrangian multiplier from the current one.");
+  keys.add("optional","APPLY_WEIGHTS","Vector of weights containing 1 in correspondence of each replica that will receive the Lagrangian multiplier from the current one.");
   keys.add("optional","PACE","the frequency for Lagrangian multipliers update");
   keys.add("optional","PRINT_STRIDE","stride of Lagrangian multipliers output file. If no STRIDE is passed they are written every time they are updated (PACE).");
-  keys.add("optional","FMT","specify format for Lagrangian multipliers files (usefulf to decrease the number of digits in regtests)");
+  keys.add("optional","FMT","specify format for Lagrangian multipliers files (useful to decrease the number of digits in regtests)");
   keys.addFlag("REWEIGHT",false,"to be used with plumed driver in order to reweight a trajectory a posteriori");
-  keys.addFlag("NO_BROADCAST",false,"If active will avoid Lagrangian multipliers to be comunicated to other replicas.");
+  keys.addFlag("NO_BROADCAST",false,"If active will avoid Lagrangian multipliers to be communicated to other replicas.");
   keys.add("optional","TEMP","the system temperature.  This is required if you are reweighting.");
   keys.addOutputComponent("force2","default","the instantaneous value of the squared force due to this bias potential");
   keys.addOutputComponent("work","default","the instantaneous value of the work done by the biasing force");
@@ -208,9 +211,6 @@ void MaxEnt::registerKeywords(Keywords& keys) {
   keys.addOutputComponent("_error","default","Instantaneous values of the discrepancy between the observable and the restraint center");
   keys.addOutputComponent("_coupling","default","Instantaneous values of Lagrangian multipliers. They are also written by default in a separate output file.");
   keys.use("RESTART");
-}
-MaxEnt::~MaxEnt() {
-  lagmultOfile_.close();
 }
 MaxEnt::MaxEnt(const ActionOptions&ao):
   PLUMED_BIAS_INIT(ao),
@@ -270,7 +270,7 @@ MaxEnt::MaxEnt(const ActionOptions&ao):
   parse("FILE",lagmultfname);
   parse("FMT",fmt);
   parse("PACE",pace_);
-  if(pace_<=0 ) error("frequency for lagrangian multipliers update (PACE) is nonsensical");
+  if(pace_<=0 ) error("frequency for Lagrangian multipliers update (PACE) is nonsensical");
   stride_=pace_;  //if no STRIDE is passed, then Lagrangian multipliers willbe printed at each update
   parse("PRINT_STRIDE",stride_);
   if(stride_<=0 ) error("frequency for Lagrangian multipliers printing (STRIDE) is nonsensical");
@@ -331,7 +331,6 @@ MaxEnt::MaxEnt(const ActionOptions&ao):
       printFirstStep=false;
     }
     ifile.reset(false);
-    ifile.close();
   }
 
   lagmultOfile_.link(*this);
@@ -341,9 +340,6 @@ MaxEnt::MaxEnt(const ActionOptions&ao):
 ////MEMBER FUNCTIONS
 void MaxEnt::ReadLagrangians(IFile &ifile)
 {
-  unsigned ncv=getNumberOfArguments();
-  double deltat=getTimeStep();
-  double last_checkpoint=getTime();
   double dummy;
   while(ifile.scanField("time",dummy)) {
     for(unsigned j=0; j<getNumberOfArguments(); ++j) {
@@ -430,20 +426,17 @@ void MaxEnt::update_lambda() {
 
   double totalWork_=0.0;
   const double time=getTime();
-  const double deltat=getTimeStep();
   const double step=getStep();
   double KbT=simtemp;
   double learning_rate;
-  double cv;
   if(reweight)
     BetaReweightBias=plumed.getBias()/KbT;
   else
     BetaReweightBias=0.0;
 
   for(unsigned i=0; i<getNumberOfArguments(); ++i) {
-    double sigma2=pow(sigma,2.0);
     const double k=kappa[i];
-    cv=(getArgument(i)+compute_error(error_type,lambda[i])-at[i]);
+    double cv=(getArgument(i)+compute_error(error_type,lambda[i])-at[i]);
     if(reweight)
       learning_rate=1.0*k/(1+step/tau[i]);
     else

@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2015-2017 The plumed team
+   Copyright (c) 2015-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -39,7 +39,7 @@ The free energy calculated on a grid is output by this action and can be printed
 
 \par Examples
 
-This is a typical example showing how CONVERT_TO_FES might be used when postprocessing a trajectory.
+This is a typical example showing how CONVERT_TO_FES might be used when post processing a trajectory.
 The input below calculates the free energy as a function of the distance between atom 1 and atom 2.
 This is done by accumulating a histogram as a function of this distance using kernel density estimation
 and the HISTOGRAM action.  All the data within this trajectory is used in the construction of this
@@ -92,11 +92,11 @@ ConvertToFES::ConvertToFES(const ActionOptions&ao):
   plumed_assert( ingrid->getNumberOfComponents()==1 );
 
   // Create a grid
-  createGrid( "grid", "COMPONENTS=" + getLabel() + " " + ingrid->getInputString() );
-  if( ingrid->noDerivatives() ) mygrid->setNoDerivatives();
+  auto grid=createGrid( "grid", "COMPONENTS=" + getLabel() + " " + ingrid->getInputString() );
+  if( ingrid->noDerivatives() ) grid->setNoDerivatives();
   std::vector<double> fspacing;
-  mygrid->setBounds( ingrid->getMin(), ingrid->getMax(), ingrid->getNbin(), fspacing);
-  setAveragingAction( mygrid, true );
+  grid->setBounds( ingrid->getMin(), ingrid->getMax(), ingrid->getNbin(), fspacing);
+  setAveragingAction( std::move(grid), true );
 
   simtemp=0.; parse("TEMP",simtemp);
   if(simtemp>0) simtemp*=plumed.getAtoms().getKBoltzmann();

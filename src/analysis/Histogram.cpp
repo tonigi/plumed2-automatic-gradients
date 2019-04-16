@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2012-2017 The plumed team
+   Copyright (c) 2012-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -62,19 +62,19 @@ We calculate histograms within PLUMED using a method known as kernel density est
 https://en.wikipedia.org/wiki/Kernel_density_estimation
 
 In PLUMED the value of \f$\zeta\f$ at each discrete instant in time in the trajectory is accumulated.  A kernel, \f$K(\zeta-\zeta(t'),\sigma)\f$,
-centered at the current value, \f$\zeta(t)\f$, of this quantity is generated with a bandwith \f$\sigma\f$, which
+centered at the current value, \f$\zeta(t)\f$, of this quantity is generated with a bandwidth \f$\sigma\f$, which
 is set by the user.  These kernels are then used to accumulate the ensemble average for the probability density:
 
 \f[
 \langle P(\zeta) \rangle = \frac{ \sum_{t'=0}^t w(t') K(\zeta-\zeta(t'),\sigma) }{ \sum_{t'=0}^t w(t') }
 \f]
 
-Here the sums run over a portion of the trajectory specified by the user.  The final quantity evalulated is a weighted
+Here the sums run over a portion of the trajectory specified by the user.  The final quantity evaluated is a weighted
 average as the weights, \f$w(t')\f$, allow us to negate the effect any bias might have on the region of phase space
 sampled by the system.  This is discussed in the section of the manual on \ref Analysis.
 
 A discrete analogue of kernel density estimation can also be used.  In this analogue the kernels in the above formula
-are replaced by dirac delta functions.   When this method is used the final function calculated is no longer a probability
+are replaced by Dirac delta functions.   When this method is used the final function calculated is no longer a probability
 density - it is instead a probability mass function as each element of the function tells you the value of an integral
 between two points on your grid rather than the value of a (continuous) function on a grid.
 
@@ -101,17 +101,17 @@ weighted average.  Furthermore, the weights should be taken into account when th
 
 where \f$W_i\f$ is the sum of all the weights for the \f$i\f$th block of data.
 
-If we wish to caclulate a normalized histogram we must calculate ensemble averages from our biased simulation using:
+If we wish to calculate a normalized histogram we must calculate ensemble averages from our biased simulation using:
 \f[
  \langle H(x) \rangle = \frac{\sum_{t=1}^M w_t K( x - x_t,\sigma) }{\sum_{t=1}^M w_t}
 \f]
-where the sums runs over the trajectory, \f$w_t\f$ is the weight of the \f$t\f$th trajectory frame, \f$x_t\f$ is the value of the cv for the \f$t\f$th
+where the sums runs over the trajectory, \f$w_t\f$ is the weight of the \f$t\f$th trajectory frame, \f$x_t\f$ is the value of the CV for the \f$t\f$th
 trajectory frame and \f$K\f$ is a kernel function centered on \f$x_t\f$ with bandwidth \f$\sigma\f$.  The quantity that is evaluated is the value of the
 normalized histogram at point \f$x\f$.  The following ensemble average will be calculated if you use the NORMALIZATION=true option in HISTOGRAM.
 If the ensemble average is calculated in this way we must calculate the associated error bars from our block averages using the second of the expressions
 above.
 
-A number of works have shown that when biased simulations are performed it is often better to calculate an unormalized estimate of the histogram using:
+A number of works have shown that when biased simulations are performed it is often better to calculate an estimate of the histogram that is not normalized using:
 \f[
 \langle H(x) \rangle = \frac{1}{M} \sum_{t=1}^M w_t K( x - x_t,\sigma)
 \f]
@@ -122,7 +122,7 @@ block averages.
 \par Examples
 
 The following input monitors two torsional angles during a simulation
-and outputs a continuos histogram as a function of them at the end of the simulation.
+and outputs a continuous histogram as a function of them at the end of the simulation.
 \plumedfile
 TORSION ATOMS=1,2,3,4 LABEL=r1
 TORSION ATOMS=2,3,4,5 LABEL=r2
@@ -145,7 +145,6 @@ TORSION ATOMS=1,2,3,4 LABEL=r1
 TORSION ATOMS=2,3,4,5 LABEL=r2
 HISTOGRAM ...
   ARG=r1,r2
-  USE_ALL_DATA
   KERNEL=DISCRETE
   GRID_MIN=-3.14,-3.14
   GRID_MAX=3.14,3.14
@@ -201,10 +200,11 @@ class Histogram : public gridtools::ActionWithGrid {
 private:
   double ww;
   bool in_apply, mvectors;
-  KernelFunctions* kernel;
+  std::unique_ptr<KernelFunctions> kernel;
   std::vector<double> forcesToApply, finalForces;
   std::vector<vesselbase::ActionWithVessel*> myvessels;
   std::vector<vesselbase::StoreDataVessel*> stashes;
+// this is a plain pointer since this object is now owned
   gridtools::HistogramOnGrid* myhist;
 public:
   static void registerKeywords( Keywords& keys );
@@ -213,6 +213,7 @@ public:
   void prepareForAveraging();
   void performOperations( const bool& from_update );
   void finishAveraging();
+  bool threadSafe() const { return !in_apply; }
   bool isPeriodic() { return false; }
   unsigned getNumberOfDerivatives();
   void turnOnDerivatives();
@@ -226,7 +227,7 @@ void Histogram::registerKeywords( Keywords& keys ) {
   gridtools::ActionWithGrid::registerKeywords( keys ); keys.use("ARG"); keys.remove("NORMALIZATION");
   keys.add("compulsory","NORMALIZATION","ndata","This controls how the data is normalized it can be set equal to true, false or ndata.  See above for an explanation");
   keys.add("optional","DATA","input data from action with vessel and compute histogram");
-  keys.add("optional","VECTORS","input three dimsnional vectors for computing histogram");
+  keys.add("optional","VECTORS","input three dimensional vectors for computing histogram");
   keys.add("compulsory","GRID_MIN","the lower bounds for the grid");
   keys.add("compulsory","GRID_MAX","the upper bounds for the grid");
   keys.add("optional","GRID_BIN","the number of bins for the grid");
@@ -239,46 +240,38 @@ Histogram::Histogram(const ActionOptions&ao):
   ActionWithGrid(ao),
   ww(0.0),
   in_apply(false),
-  mvectors(false),
-  kernel(NULL)
+  mvectors(false)
 {
   // Read in arguments
-  std::string vlab; parse("VECTORS",vlab);
-  if( vlab.length()>0 ) {
-    ActionWithVessel* myv = plumed.getActionSet().selectWithLabel<ActionWithVessel*>( vlab );
-    if( !myv ) error("action labelled " + vlab + " does not exist or is not an ActionWithVessel");
-    myvessels.push_back( myv ); stashes.push_back( myv->buildDataStashes( NULL ) );
-    addDependency( myv ); mvectors=true;
-    if( myv->getNumberOfQuantities()!=5 ) error("can only compute histograms for three dimensional vectors");
-    log.printf("  for vector quantities calculated by %s \n", vlab.c_str() );
-  } else {
-    std::vector<std::string> mlab; parseVector("DATA",mlab);
-    if( mlab.size()>0 ) {
-      for(unsigned i=0; i<mlab.size(); ++i) {
-        ActionWithVessel* myv = plumed.getActionSet().selectWithLabel<ActionWithVessel*>( mlab[i] );
-        if( !myv ) error("action labelled " + mlab[i] + " does not exist or is not an ActionWithVessel");
-        myvessels.push_back( myv ); stashes.push_back( myv->buildDataStashes( NULL ) );
-        // log.printf("  for all base quantities calculated by %s \n",myvessel->getLabel().c_str() );
-        // Add the dependency
-        addDependency( myv );
-      }
-      unsigned nvals = myvessels[0]->getFullNumberOfTasks();
-      for(unsigned i=1; i<mlab.size(); ++i) {
-        if( nvals!=myvessels[i]->getFullNumberOfTasks() ) error("mismatched number of quantities calculated by actions input to histogram");
-      }
-      log.printf("  for all base quantities calculated by %s ", myvessels[0]->getLabel().c_str() );
-      for(unsigned i=1; i<mlab.size(); ++i) log.printf(", %s \n", myvessels[i]->getLabel().c_str() );
-      log.printf("\n");
+  if( getNumberOfArguments()==0 ) {
+    std::string vlab; parse("VECTORS",vlab);
+    if( vlab.length()>0 ) {
+      ActionWithVessel* myv = plumed.getActionSet().selectWithLabel<ActionWithVessel*>( vlab );
+      if( !myv ) error("action labelled " + vlab + " does not exist or is not an ActionWithVessel");
+      myvessels.push_back( myv ); stashes.push_back( myv->buildDataStashes( NULL ) );
+      addDependency( myv ); mvectors=true;
+      if( myv->getNumberOfQuantities()!=5 ) error("can only compute histograms for three dimensional vectors");
+      log.printf("  for vector quantities calculated by %s \n", vlab.c_str() );
     } else {
-      std::vector<Value*> arg; parseArgumentList("ARG",arg);
-      if(!arg.empty()) {
-        log.printf("  with arguments");
-        for(unsigned i=0; i<arg.size(); i++) log.printf(" %s",arg[i]->getName().c_str());
+      std::vector<std::string> mlab; parseVector("DATA",mlab);
+      if( mlab.size()>0 ) {
+        for(unsigned i=0; i<mlab.size(); ++i) {
+          ActionWithVessel* myv = plumed.getActionSet().selectWithLabel<ActionWithVessel*>( mlab[i] );
+          if( !myv ) error("action labelled " + mlab[i] + " does not exist or is not an ActionWithVessel");
+          myvessels.push_back( myv ); stashes.push_back( myv->buildDataStashes( NULL ) );
+          // log.printf("  for all base quantities calculated by %s \n",myvessel->getLabel().c_str() );
+          // Add the dependency
+          addDependency( myv );
+        }
+        unsigned nvals = myvessels[0]->getFullNumberOfTasks();
+        for(unsigned i=1; i<mlab.size(); ++i) {
+          if( nvals!=myvessels[i]->getFullNumberOfTasks() ) error("mismatched number of quantities calculated by actions input to histogram");
+        }
+        log.printf("  for all base quantities calculated by %s ", myvessels[0]->getLabel().c_str() );
+        for(unsigned i=1; i<mlab.size(); ++i) log.printf(", %s \n", myvessels[i]->getLabel().c_str() );
         log.printf("\n");
-        // Retrieve the bias acting and make sure we request this also
-        std::vector<Value*> bias( ActionWithArguments::getArguments() );
-        for(unsigned i=0; i<bias.size(); ++i) arg.push_back( bias[i] );
-        requestArguments(arg);
+      } else {
+        error("input data is missing use ARG/VECTORS/DATA");
       }
     }
   }
@@ -312,7 +305,8 @@ Histogram::Histogram(const ActionOptions&ao):
     }
   }
   // And create the grid
-  createGrid( "histogram", vstring );
+  auto grid=createGrid( "histogram", vstring );
+  // notice that createGrid also sets mygrid=grid.get()
   if( mygrid->getType()=="flat" ) {
     if( mvectors ) error("computing histogram for three dimensional vectors but grid is not of fibonacci type - use CONCENTRATION");
     std::vector<std::string> gmin( narg ), gmax( narg );
@@ -333,12 +327,14 @@ Histogram::Histogram(const ActionOptions&ao):
   if( myvessels.size()>0 ) {
     // Create a task list
     for(unsigned i=0; i<myvessels[0]->getFullNumberOfTasks(); ++i) addTaskToList(i);
-    setAveragingAction( mygrid, true );
+    setAveragingAction( std::move(grid), true );
+  } else if( storeThenAverage() ) {
+    setAveragingAction( std::move(grid), true );
   } else {
     // Create a task list
     for(unsigned i=0; i<mygrid->getNumberOfPoints(); ++i) addTaskToList(i);
     myhist->addOneKernelEachTimeOnly();
-    setAveragingAction( mygrid, myhist->noDiscreteKernels() );
+    setAveragingAction( std::move(grid), myhist->noDiscreteKernels() );
   }
   checkRead();
 }
@@ -375,7 +371,7 @@ unsigned Histogram::getNumberOfDerivatives() {
 unsigned Histogram::getNumberOfQuantities() const {
   if( mvectors ) return myvessels[0]->getNumberOfQuantities();
   else if( myvessels.size()>0 ) return myvessels.size()+2;
-  return 2;
+  return ActionWithAveraging::getNumberOfQuantities();
 }
 
 void Histogram::prepareForAveraging() {
@@ -396,12 +392,12 @@ void Histogram::prepareForAveraging() {
     // Sort out normalization of histogram
     if( !noNormalization() ) ww = cweight / norm;
     else ww = cweight;
-  } else {
+  } else if( !storeThenAverage() ) {
     // Now fetch the kernel and the active points
     std::vector<double> point( getNumberOfArguments() );
     for(unsigned i=0; i<point.size(); ++i) point[i]=getArgument(i);
     unsigned num_neigh; std::vector<unsigned> neighbors(1);
-    kernel = myhist->getKernelAndNeighbors( point, num_neigh, neighbors );
+    kernel=myhist->getKernelAndNeighbors( point, num_neigh, neighbors );
 
     if( num_neigh>1 ) {
       // Activate relevant tasks
@@ -418,7 +414,7 @@ void Histogram::prepareForAveraging() {
 void Histogram::performOperations( const bool& from_update ) { if( myvessels.size()==0 ) plumed_dbg_assert( !myhist->noDiscreteKernels() ); }
 
 void Histogram::finishAveraging() {
-  if( myvessels.size()==0 ) delete kernel;
+  if( myvessels.size()==0 ) kernel.reset();
 }
 
 void Histogram::compute( const unsigned& current, MultiValue& myvals ) const {
@@ -442,7 +438,7 @@ void Histogram::compute( const unsigned& current, MultiValue& myvals ) const {
   } else if( myvessels.size()>0 ) {
     std::vector<double> cvals( myvessels[0]->getNumberOfQuantities() );
     stashes[0]->retrieveSequentialValue( current, false, cvals );
-    unsigned derbase; double totweight=cvals[0], tnorm = cvals[0]; myvals.setValue( 1, cvals[1] );
+    unsigned derbase=0; double totweight=cvals[0], tnorm = cvals[0]; myvals.setValue( 1, cvals[1] );
     // Get the derivatives as well if we are in apply
     if( in_apply ) {
       // This bit gets the total weight
@@ -486,14 +482,14 @@ void Histogram::compute( const unsigned& current, MultiValue& myvals ) const {
     if( in_apply ) myvals.updateDynamicList();
   } else {
     plumed_assert( !in_apply );
-    std::vector<Value*> vv( myhist->getVectorOfValues() );
+    std::vector<std::unique_ptr<Value>> vv( myhist->getVectorOfValues() );
     std::vector<double> val( getNumberOfArguments() ), der( getNumberOfArguments() );
     // Retrieve the location of the grid point at which we are evaluating the kernel
     mygrid->getGridPointCoordinates( current, val );
     if( kernel ) {
       for(unsigned i=0; i<getNumberOfArguments(); ++i) vv[i]->set( val[i] );
       // Evaluate the histogram at the relevant grid point and set the values
-      double vvh = kernel->evaluate( vv, der,true); myvals.setValue( 1, vvh );
+      double vvh = kernel->evaluate( Tools::unique2raw(vv), der,true); myvals.setValue( 1, vvh );
     } else {
       plumed_merror("normalisation of vectors does not work with arguments and spherical grids");
       // Evalulate dot product
@@ -504,7 +500,7 @@ void Histogram::compute( const unsigned& current, MultiValue& myvals ) const {
       for(unsigned j=0; j<getNumberOfArguments(); ++j) der[j] *= (myhist->von_misses_concentration)*newval;
     }
     // Set the derivatives and delete the vector of values
-    for(unsigned i=0; i<getNumberOfArguments(); ++i) { myvals.setDerivative( 1, i, der[i] ); delete vv[i]; }
+    for(unsigned i=0; i<getNumberOfArguments(); ++i) { myvals.setDerivative( 1, i, der[i] ); }
   }
 }
 

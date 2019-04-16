@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -27,9 +27,11 @@
 #include "tools/AtomNumber.h"
 #include <vector>
 #include <set>
-#include "tools/Units.h"
+#include <memory>
 
 namespace PLMD {
+
+class Units;
 
 /**
 Class containing interface to MDAtomsTyped
@@ -42,16 +44,14 @@ ordering indexes (to deal with domain decomposition codes) and layout
 The class is abstract, but it is possible to allocate a new pointer with
 create(n), where n is the actual size of MD-reals e.g.
 \verbatim
-  MDAtomsBase mdatoms=MDAtomsBase::create(sizeof(float));
-// ...
-  delete mdatoms;
+  std::unique_ptr<MDAtomsBase> mdatoms=MDAtomsBase::create(sizeof(float));
 \endverbatim
 */
 class MDAtomsBase
 {
 public:
 /// Creates an MDAtomsTyped<T> object such that sizeof(T)==n
-  static MDAtomsBase* create(unsigned n);
+  static std::unique_ptr<MDAtomsBase> create(unsigned n);
 /// Virtual destructor, just to allow inheritance.
   virtual ~MDAtomsBase() {}
 /// Get the size of MD-real
@@ -108,6 +108,16 @@ public:
 /// Rescale all the forces, including the virial.
 /// It is applied to all atoms with local index going from 0 to index.size()-1
   virtual void rescaleForces(const std::vector<int>&index,double factor)=0;
+
+/// Set a pointer to an extra CV.
+  virtual void setExtraCV(const std::string &name,void*p)=0;
+/// Set a pointer to an extra CV force.
+  virtual void setExtraCVForce(const std::string &name,void*p)=0;
+/// Retrieve the value of an extra CV.
+  virtual double getExtraCV(const std::string &name)=0;
+/// Update the value of an extra CV force.
+/// \todo check if this should also be scaled when acting on total energy
+  virtual void updateExtraCVForce(const std::string &name,double f)=0;
 };
 
 }

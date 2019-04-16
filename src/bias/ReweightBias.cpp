@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016,2017 The plumed team
+   Copyright (c) 2016-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -72,7 +72,7 @@ class ReweightBias : public ReweightBase {
 public:
   static void registerKeywords(Keywords&);
   explicit ReweightBias(const ActionOptions&ao);
-  double getLogWeight() const ;
+  double getLogWeight();
 };
 
 PLUMED_REGISTER_ACTION(ReweightBias,"REWEIGHT_BIAS")
@@ -88,7 +88,7 @@ ReweightBias::ReweightBias(const ActionOptions&ao):
 {
 }
 
-double ReweightBias::getLogWeight() const {
+double ReweightBias::getLogWeight() {
   // Retrieve the bias
   double bias=0.0; for(unsigned i=0; i<getNumberOfArguments(); ++i) bias+=getArgument(i);
   return bias / simtemp;

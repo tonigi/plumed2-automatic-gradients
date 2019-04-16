@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -80,7 +80,7 @@ public:
   void lockRequests();
   void unlockRequests();
 /// Returns an array of pointers to the arguments
-  const std::vector<Value*>    & getArguments() const ;
+  virtual const std::vector<Value*>    & getArguments() const ;
 /// Convert a list of argument names into a list of pointers to the values
   void interpretArgumentList(const std::vector<std::string>& c, std::vector<Value*>&arg);
 };

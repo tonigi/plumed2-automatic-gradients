@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -41,7 +41,6 @@ class PlumedMain;
 
 Atoms::Atoms(PlumedMain&plumed):
   natoms(0),
-  pbc(*new Pbc),
   md_energy(0.0),
   energy(0.0),
   dataCanBeSet(false),
@@ -55,6 +54,7 @@ Atoms::Atoms(PlumedMain&plumed):
   virialHasBeenSet(false),
   massAndChargeOK(false),
   shuffledAtoms(0),
+  mdatoms(MDAtomsBase::create(sizeof(double))),
   plumed(plumed),
   naturalUnits(false),
   MDnaturalUnits(false),
@@ -66,15 +66,12 @@ Atoms::Atoms(PlumedMain&plumed):
   atomsNeeded(false),
   ddStep(0)
 {
-  mdatoms=MDAtomsBase::create(sizeof(double));
 }
 
 Atoms::~Atoms() {
   if(actions.size()>0) {
     std::cerr<<"WARNING: there is some inconsistency in action added to atoms, as some of them were not properly destroyed. This might indicate an internal bug!!\n";
   }
-  delete mdatoms;
-  delete &pbc;
 }
 
 void Atoms::startStep() {
@@ -175,7 +172,7 @@ void Atoms::shareAll() {
   unique.clear();
   // keep in unique only those atoms that are local
   if(dd && shuffledAtoms>0) {
-    for(int i=0; i<natoms; i++) if(dd.g2l[i]>=0) unique.insert(AtomNumber::index(i));
+    for(int i=0; i<natoms; i++) if(g2l[i]>=0) unique.insert(AtomNumber::index(i));
   } else {
     for(int i=0; i<natoms; i++) unique.insert(AtomNumber::index(i));
   }
@@ -205,10 +202,8 @@ void Atoms::share(const std::set<AtomNumber>& unique) {
   } else {
     uniq_index.clear();
     uniq_index.reserve(unique.size());
-    if(dd && shuffledAtoms>0) {
-      for(const auto & p : unique) uniq_index.push_back(dd.g2l[p.index()]);
-    } else {
-      for(const auto & p : unique) uniq_index.push_back(p.index());
+    if(shuffledAtoms>0) {
+      for(const auto & p : unique) uniq_index.push_back(g2l[p.index()]);
     }
     mdatoms->getPositions(unique,uniq_index,positions);
   }
@@ -218,8 +213,8 @@ void Atoms::share(const std::set<AtomNumber>& unique) {
   int ndata=3;
   if(!massAndChargeOK) {
     ndata=5;
-    masses.assign(masses.size(),NAN);
-    charges.assign(charges.size(),NAN);
+    masses.assign(masses.size(),std::numeric_limits<double>::quiet_NaN());
+    charges.assign(charges.size(),std::numeric_limits<double>::quiet_NaN());
     mdatoms->getCharges(gatindex,charges);
     mdatoms->getMasses(gatindex,masses);
   }
@@ -370,8 +365,8 @@ void Atoms::DomainDecomposition::enable(Communicator& c) {
 
 void Atoms::setAtomsNlocal(int n) {
   gatindex.resize(n);
+  g2l.resize(natoms,-1);
   if(dd) {
-    dd.g2l.resize(natoms,-1);
 // Since these vectors are sent with MPI by using e.g.
 // &dd.positionsToBeSent[0]
 // we make sure they are non-zero-sized so as to
@@ -381,7 +376,7 @@ void Atoms::setAtomsNlocal(int n) {
     dd.positionsToBeReceived.resize(natoms*5,0.0);
     dd.indexToBeSent.resize(n,0);
     dd.indexToBeReceived.resize(natoms,0);
-  };
+  }
 }
 
 void Atoms::setAtomsGatindex(int*g,bool fortran) {
@@ -392,7 +387,7 @@ void Atoms::setAtomsGatindex(int*g,bool fortran) {
   } else {
     for(unsigned i=0; i<gatindex.size(); i++) gatindex[i]=g[i];
   }
-  for(unsigned i=0; i<dd.g2l.size(); i++) dd.g2l[i]=-1;
+  for(unsigned i=0; i<g2l.size(); i++) g2l[i]=-1;
   if( gatindex.size()==natoms ) {
     shuffledAtoms=0;
     for(unsigned i=0; i<gatindex.size(); i++) {
@@ -403,8 +398,8 @@ void Atoms::setAtomsGatindex(int*g,bool fortran) {
   }
   if(dd) {
     dd.Sum(shuffledAtoms);
-    for(unsigned i=0; i<gatindex.size(); i++) dd.g2l[gatindex[i]]=i;
   }
+  for(unsigned i=0; i<gatindex.size(); i++) g2l[gatindex[i]]=i;
 
   for(unsigned i=0; i<actions.size(); i++) {
     // keep in unique only those atoms that are local
@@ -416,8 +411,8 @@ void Atoms::setAtomsGatindex(int*g,bool fortran) {
 void Atoms::setAtomsContiguous(int start) {
   ddStep=plumed.getStep();
   for(unsigned i=0; i<gatindex.size(); i++) gatindex[i]=start+i;
-  for(unsigned i=0; i<dd.g2l.size(); i++) dd.g2l[i]=-1;
-  if(dd) for(unsigned i=0; i<gatindex.size(); i++) dd.g2l[gatindex[i]]=i;
+  for(unsigned i=0; i<g2l.size(); i++) g2l[i]=-1;
+  for(unsigned i=0; i<gatindex.size(); i++) g2l[gatindex[i]]=i;
   if(gatindex.size()<natoms) shuffledAtoms=1;
   for(unsigned i=0; i<actions.size(); i++) {
     // keep in unique only those atoms that are local
@@ -427,9 +422,7 @@ void Atoms::setAtomsContiguous(int start) {
 }
 
 void Atoms::setRealPrecision(int p) {
-  MDAtomsBase *x=MDAtomsBase::create(p);
-  delete mdatoms;
-  mdatoms=x;
+  mdatoms=MDAtomsBase::create(p);
 }
 
 int Atoms::getRealPrecision()const {
@@ -465,14 +458,29 @@ double Atoms::getKbT()const {
 
 
 void Atoms::createFullList(int*n) {
-  vector<AtomNumber> fullListTmp;
-  for(unsigned i=0; i<actions.size(); i++) if(actions[i]->isActive())
-      fullListTmp.insert(fullListTmp.end(),actions[i]->getUnique().begin(),actions[i]->getUnique().end());
-  std::sort(fullListTmp.begin(),fullListTmp.end());
-  int nn=std::unique(fullListTmp.begin(),fullListTmp.end())-fullListTmp.begin();
-  fullList.resize(nn);
-  for(int i=0; i<nn; ++i) fullList[i]=fullListTmp[i].index();
-  *n=nn;
+  if(!massAndChargeOK && shareMassAndChargeOnlyAtFirstStep) {
+    *n=natoms;
+    fullList.resize(natoms);
+    for(unsigned i=0; i<natoms; i++) fullList[i]=i;
+  } else {
+// We update here the unique list defined at Atoms::unique.
+// This is not very clear, and probably should be coded differently.
+// Hopefully this fix the longstanding issue with NAMD.
+    unique.clear();
+    for(unsigned i=0; i<actions.size(); i++) {
+      if(actions[i]->isActive()) {
+        if(!actions[i]->getUnique().empty()) {
+          atomsNeeded=true;
+          // unique are the local atoms
+          unique.insert(actions[i]->getUnique().begin(),actions[i]->getUnique().end());
+        }
+      }
+    }
+    fullList.resize(0);
+    fullList.reserve(unique.size());
+    for(const auto & p : unique) fullList.push_back(p.index());
+    *n=fullList.size();
+  }
 }
 
 void Atoms::getFullList(int**x) {
@@ -542,12 +550,12 @@ void Atoms::readBinary(std::istream&i) {
 }
 
 double Atoms::getKBoltzmann()const {
-  if(naturalUnits) return 1.0;
+  if(naturalUnits || MDnaturalUnits) return 1.0;
   else return kBoltzmann/units.getEnergy();
 }
 
 double Atoms::getMDKBoltzmann()const {
-  if(naturalUnits) return 1.0;
+  if(naturalUnits || MDnaturalUnits) return 1.0;
   else return kBoltzmann/MDUnits.getEnergy();
 }
 
@@ -571,6 +579,22 @@ void Atoms::getLocalMDForces(std::vector<Vector>& localForces) {
   for(unsigned i=0; i<gatindex.size(); i++) {
     localForces[i] = mdatoms->getMDforces(i);
   }
+}
+
+void Atoms::setExtraCV(const std::string &name,void*p) {
+  mdatoms->setExtraCV(name,p);
+}
+
+void Atoms::setExtraCVForce(const std::string &name,void*p) {
+  mdatoms->setExtraCVForce(name,p);
+}
+
+double Atoms::getExtraCV(const std::string &name) {
+  return mdatoms->getExtraCV(name);
+}
+
+void Atoms::updateExtraCVForce(const std::string &name,double f) {
+  mdatoms->updateExtraCVForce(name,f);
 }
 
 }

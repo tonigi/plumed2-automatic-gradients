@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2017 The plumed team
+   Copyright (c) 2017-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -51,7 +51,7 @@ GMM_FILE. We are currently working on a web server to perform
 this operation. In the meantime, the user can request a stand-alone version of the GMM code at massimiliano.bonomi_AT_gmail.com.
 
 When run in single-replica mode, this action allows atomistic, flexible refinement of an individual structure into a density map.
-Combined with a multi-replica framework (such as the -multi option in GROMACS), the user can model an esemble of structures using
+Combined with a multi-replica framework (such as the -multi option in GROMACS), the user can model an ensemble of structures using
 the Metainference approach \cite Bonomi:2016ip .
 
 \warning
@@ -416,15 +416,16 @@ void EMMI::check_GMM_d(VectorGeneric<6> &cov, double w)
 // read GMM data file in PLUMED format:
 void EMMI::get_GMM_d(string GMM_file)
 {
-  int idcomp, beta;
-  double w, m0, m1, m2;
   VectorGeneric<6> cov;
 
 // open file
-  IFile *ifile = new IFile();
+  std::unique_ptr<IFile> ifile(new IFile);
   if(ifile->FileExist(GMM_file)) {
     ifile->open(GMM_file);
+    int idcomp;
     while(ifile->scanField("Id",idcomp)) {
+      int beta;
+      double w, m0, m1, m2;
       ifile->scanField("Weight",w);
       ifile->scanField("Mean_0",m0);
       ifile->scanField("Mean_1",m1);
@@ -449,11 +450,9 @@ void EMMI::get_GMM_d(string GMM_file)
       // new line
       ifile->scanField();
     }
-    ifile->close();
   } else {
     error("Cannot find GMM_FILE "+GMM_file+"\n");
   }
-  delete ifile;
 
 }
 

@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016-2017 The VES code team
+   Copyright (c) 2016-2018 The VES code team
    (see the PEOPLE-VES file at the root of this folder for a list of names)
 
    See http://www.ves-code.org for more information.
@@ -41,7 +41,10 @@ void FermiSwitchingFunction::registerKeywords( Keywords& keys ) {
 
 void FermiSwitchingFunction::set(const std::string& definition,std::string& errormsg) {
   std::vector<std::string> data=Tools::getWords(definition);
-  if( data.size()<1 ) errormsg="missing all input for switching function";
+  if( data.size()<1 ) {
+    errormsg="missing all input for switching function";
+    return;
+  }
   std::string name=data[0];
   data.erase(data.begin());
   if(name!="FERMI") {errormsg="only FERMI is supported";}

@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2014-2017 The plumed team
+   Copyright (c) 2014-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -26,6 +26,7 @@
 
 #include <string>
 #include <cmath>
+#include <memory>
 
 using namespace std;
 
@@ -35,7 +36,7 @@ namespace isdb {
 //+PLUMEDOC ISDB_COLVAR NOE
 /*
 Calculates NOE intensities as sums of 1/r^6, also averaging over multiple equivalent atoms
-or ambiguous NOE.
+ or ambiguous NOE.
 
 Each NOE is defined by two groups containing the same number of atoms, distances are
 calculated in pairs, transformed in 1/r^6, summed and saved as components.
@@ -73,13 +74,12 @@ class NOE :
 private:
   bool             pbc;
   vector<unsigned> nga;
-  NeighborList     *nl;
+  std::unique_ptr<NeighborList> nl;
   unsigned         tot_size;
 public:
   static void registerKeywords( Keywords& keys );
   explicit NOE(const ActionOptions&);
-  ~NOE();
-  void calculate();
+  virtual void calculate();
   void update();
 };
 
@@ -132,7 +132,7 @@ NOE::NOE(const ActionOptions&ao):
   }
   if(nga.size()!=ngb.size()) error("There should be the same number of GROUPA and GROUPB keywords");
   // Create neighbour lists
-  nl= new NeighborList(ga_lista,gb_lista,true,pbc,getPbc());
+  nl.reset( new NeighborList(ga_lista,gb_lista,true,pbc,getPbc()) );
 
   bool addexp=false;
   parseFlag("ADDEXP",addexp);
@@ -196,17 +196,13 @@ NOE::NOE(const ActionOptions&ao):
     }
   }
 
-  requestAtoms(nl->getFullAtomList());
+  requestAtoms(nl->getFullAtomList(), false);
   if(getDoScore()) {
     setParameters(noedist);
     Initialise(nga.size());
   }
   setDerivatives();
   checkRead();
-}
-
-NOE::~NOE() {
-  delete nl;
 }
 
 void NOE::calculate()
@@ -220,7 +216,6 @@ void NOE::calculate()
     double noe=0;
     unsigned index=0;
     for(unsigned k=0; k<i; k++) index+=nga[k];
-    const double c_aver=1./static_cast<double>(nga[i]);
     string num; Tools::convert(i,num);
     Value* val=getPntrToComponent("noe_"+num);
     // cycle over equivalent atoms
@@ -235,11 +230,9 @@ void NOE::calculate()
       const double ir2=1./distance.modulo2();
       const double ir6=ir2*ir2*ir2;
       const double ir8=6*ir6*ir2;
-      const double tmpir6=c_aver*ir6;
-      const double tmpir8=c_aver*ir8;
 
-      noe += tmpir6;
-      deriv[index+j] = tmpir8*distance;
+      noe += ir6;
+      deriv[index+j] = ir8*distance;
       if(!getDoScore()) {
         dervir += Tensor(distance, deriv[index+j]);
         setAtomsDerivatives(val, i0,  deriv[index+j]);

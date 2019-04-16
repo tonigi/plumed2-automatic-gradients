@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -43,6 +43,7 @@ class Colvar :
 private:
 protected:
   bool isEnergy;
+  bool isExtraCV;
   void requestAtoms(const std::vector<AtomNumber> & a);
 // Set the derivatives for a particular atom equal to the input Vector
 // This routine is called setAtomsDerivatives because not because you

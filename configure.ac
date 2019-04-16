@@ -237,29 +237,42 @@ PLUMED_CONFIG_ENABLE([debug-glibcxx],[enable boundary check],[no])
 PLUMED_CONFIG_ENABLE([shared],[shared libs],[yes])
 PLUMED_CONFIG_ENABLE([dependency-tracking],[dependency tracking],[yes])
 PLUMED_CONFIG_ENABLE([rpath],[store rpath],[no])
-PLUMED_CONFIG_ENABLE([cxx-exceptions],[c++ exceptions],[yes])
+PLUMED_CONFIG_ENABLE([absolute-soname],[store absolute soname (Linux only - this is the default behavior on OSX). Only enable for testing!],[no])
+PLUMED_CONFIG_ENABLE([absolute-install-name],[store absolute relative (OSX only - disable to have a behavior similar to Linux). Only disable for testing!],[yes])
+PLUMED_CONFIG_ENABLE([loader-path],[use @loader_path to find libplumedKernel.dylib (OSX only)],[yes])
+PLUMED_CONFIG_ENABLE([bsymbolic],[use -Bsymbolic flag in making shared libraries (Linux only)],[yes])
 PLUMED_CONFIG_ENABLE([ld-r],[group object files],[yes])
 PLUMED_CONFIG_ENABLE([ar-cr],[use ar to build libplumedWrapper.a],[yes])
+PLUMED_CONFIG_ENABLE([static-archive],[try to build libplumed.a for static linking],[yes])
 PLUMED_CONFIG_ENABLE([mpi],[search for mpi],[yes])
 PLUMED_CONFIG_ENABLE([external-lapack],[search for external lapack],[yes])
 PLUMED_CONFIG_ENABLE([external-blas],[search for external blas],[yes])
 PLUMED_CONFIG_ENABLE([molfile-plugins],[use molfile_plugins],[yes])
 PLUMED_CONFIG_ENABLE([external-molfile-plugins],[search for external molfile_plugins],[yes])
-PLUMED_CONFIG_ENABLE([matheval],[search for matheval],[yes])
 PLUMED_CONFIG_ENABLE([zlib],[search for zlib],[yes])
 PLUMED_CONFIG_ENABLE([readdir-r],[search for readdir_r (threadsafe)],[yes])
 PLUMED_CONFIG_ENABLE([cregex],[search for C regular expression],[yes])
 PLUMED_CONFIG_ENABLE([dlopen],[search for dlopen],[yes])
+PLUMED_CONFIG_ENABLE([rtld_default],[search for RTLD_DEFAULT macro],[yes])
+PLUMED_CONFIG_ENABLE([chdir],[search for chdir function],[yes])
+PLUMED_CONFIG_ENABLE([getcwd],[search for getcwd function],[yes])
 PLUMED_CONFIG_ENABLE([execinfo],[search for execinfo],[yes])
 PLUMED_CONFIG_ENABLE([gsl],[search for gsl],[yes])
 PLUMED_CONFIG_ENABLE([xdrfile],[search for xdrfile],[yes])
 PLUMED_CONFIG_ENABLE([boost_graph],[search for boost graph],[no])
 PLUMED_CONFIG_ENABLE([boost_serialization],[search for boost serialization],[no])
+PLUMED_CONFIG_ENABLE([asmjit],[search for asmjit],[no])
 PLUMED_CONFIG_ENABLE([fftw],[search for fftw],[no])
+PLUMED_CONFIG_ENABLE([python],[search for python],[yes])
+PLUMED_CONFIG_ENABLE([af_ocl],[arrayfire_opencl],[search for arrayfire],[no])
+PLUMED_CONFIG_ENABLE([af_cuda],[arrayfire_cuda],[search for arrayfire],[no])
+PLUMED_CONFIG_ENABLE([af_cpu],[arrayfire_cpu],[search for arrayfire],[no])
 
 AC_ARG_VAR(SOEXT,[extension of dynamic libraries (so/dylib)])
 AC_ARG_VAR(STATIC_LIBS,[variables that should be linked statically directly to MD code - configure will add here -ldl if necessary ])
 AC_ARG_VAR(LDSHARED,[command for linking shared library - configure will use CXX plus the proper flags ])
+AC_ARG_VAR(PYTHON_BIN,[python executable (e.g. python2.7 or /opt/local/bin/python2.7) - default: search for a python executable])
+AC_ARG_VAR(BASH_COMPLETION_DIR,[path where bash completion will be installed - default: search with pkg-config])
 AC_ARG_VAR(MPIEXEC,[command to run mpi programs in tests - default not specified, which means use PLUMED_MPIRUN env var at runtime for backward compatibility])
 
 
@@ -271,11 +284,17 @@ then
   CXXFLAGS=-O3
 fi
 
-# this is list if copied from a generated ./configure script
-# the reason why I put it here explicitly is that I want a
-# correct fallback list to be searched after preferred choices
-# (e.g. MPI) have been checked.
-compilers="g++ cxx icpc gpp aCC CC cxx cc++ cl.exe FCC KCC RCC xlC_r xlC"
+# this is a list of common compilers
+compilers="g++ c++ cxx icpc"
+c_compilers="gcc cc icc"
+
+# on OSX, prefer clang++
+case `(uname)` in
+  (Darwin)
+    compilers="clang++ $compilers"
+    c_compilers="clang $c_compilers"
+  ;;
+esac
 
 # if searching for MPI, try first mpi-like compilers
 if test $mpi == true ; then
@@ -284,9 +303,7 @@ fi
 
 # do the actual search
 AC_PROG_CXX([$compilers])
-
-# for c, the standard list is used
-AC_PROG_CC
+AC_PROG_CC([$c_compilers])
 
 # also setup Fortran compiler
 # this is optional, and can be used in the late part of this 
@@ -297,9 +314,10 @@ AC_PROG_FC
 # we use C++ for all the autoconf tests
 AC_LANG(C++)
 
-# log the initial flags
-LD="$CXX"
-LDSHARED="$CXX"
+if test -z "$LDSHARED" ; then
+  LDSHARED="$CXX"
+fi
+
 AC_MSG_NOTICE([Initial CXX:         $CXX])
 AC_MSG_NOTICE([Initial CXXFLAGS:    $CXXFLAGS])
 AC_MSG_NOTICE([Initial CPPFLAGS:    $CPPFLAGS])
@@ -332,9 +350,10 @@ fi
 
 if test $gcov == true
 then
-  PLUMED_CHECK_CXXFLAG([--coverage])
+  CXX="$CXX --coverage"
+  LDSHARED="$LDSHARED --coverage"
   CFLAGS="$CFLAGS --coverage"
-  LDFLAGS="$CFLAGS --coverage"
+  PLUMED_CHECK_LDFLAGS([--coverage])
   STATIC_LIBS="$STATIC_LIBS --coverage"
 fi
 
@@ -370,7 +389,51 @@ then
    AC_MSG_WARN([Please change compiler or make sure that everything works correctly])
 fi
 
-
+AC_MSG_CHECKING([whether C++ library supports C++11 exceptions])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+#include <new>
+#include <functional>
+#include <memory>
+#include <system_error>
+#include <ios>
+#include <future>
+// capable to catch:
+void func(void) {
+  try{
+  } catch(std::bad_array_new_length &) {
+  } catch(std::bad_function_call &) {
+  } catch(std::bad_weak_ptr &) {
+  } catch(std::ios_base::failure &e) {
+    if(e.code().category()==std::generic_category()) {}
+    else if(e.code().category()==std::system_category()) {}
+    else if(e.code().category()==std::iostream_category()) {}
+    else if(e.code().category()==std::future_category()) {}
+  } catch(std::system_error &e) {
+    if(e.code().category()==std::generic_category()) {}
+    else if(e.code().category()==std::system_category()) {}
+    else if(e.code().category()==std::iostream_category()) {}
+    else if(e.code().category()==std::future_category()) {}
+  }
+// capable to throw:
+  auto a=std::bad_array_new_length();
+  auto b=std::bad_function_call();
+  auto c=std::bad_weak_ptr();
+  auto d=std::system_error(10,std::generic_category(),"msg");
+  auto e=std::system_error(10,std::system_category(),"msg");
+  auto f=std::system_error(10,std::iostream_category(),"msg");
+  auto g=std::system_error(10,std::future_category(),"msg");
+  auto h=std::ios_base::failure("msg",std::error_code(10,std::generic_category()));
+  auto i=std::ios_base::failure("msg",std::error_code(10,std::system_category()));
+  auto j=std::ios_base::failure("msg",std::error_code(10,std::iostream_category()));
+  auto k=std::ios_base::failure("msg",std::error_code(10,std::future_category()));
+}
+])],
+[
+  AC_MSG_RESULT([yes]);
+  AC_DEFINE([__PLUMED_LIBCXX11])
+],
+[AC_MSG_RESULT([no])
+])
 
 AC_SUBST(disable_dependency_tracking)
 
@@ -578,9 +641,6 @@ fi
 # when configuring with --disable-openmp
 AC_OPENMP
 
-if test $matheval == true ; then
-  PLUMED_CHECK_PACKAGE([matheval.h],[evaluator_create],[__PLUMED_HAS_MATHEVAL],[matheval])
-fi
 if test $readdir_r == true ; then
   PLUMED_CHECK_PACKAGE([dirent.h],[readdir_r],[__PLUMED_HAS_READDIR_R])
 fi
@@ -590,6 +650,27 @@ fi
 if test $dlopen == true ; then
   PLUMED_CHECK_PACKAGE([dlfcn.h],[dlopen],[__PLUMED_HAS_DLOPEN])
 fi
+
+if test $rtld_default == true ; then
+  PLUMED_CHECK_CXX_PACKAGE([RTLD_DEFAULT],[
+#include <dlfcn.h>
+int
+main ()
+{
+  void* f=dlsym(RTLD_DEFAULT,"path");
+  return 0;
+}
+  ], [__PLUMED_HAS_RTLD_DEFAULT])
+fi
+
+if test $chdir == true ; then
+  PLUMED_CHECK_PACKAGE([unistd.h],[chdir],[__PLUMED_HAS_CHDIR])
+fi
+
+if test $getcwd == true ; then
+  PLUMED_CHECK_PACKAGE([unistd.h],[getcwd],[__PLUMED_HAS_GETCWD])
+fi
+
 if test $execinfo == true ; then
   PLUMED_CHECK_PACKAGE([execinfo.h],[backtrace],[__PLUMED_HAS_EXECINFO])
 fi
@@ -642,8 +723,75 @@ int main() {
 # notice: macports install libraries with -mt suffix
 fi
 
+if test $asmjit == true ; then
+  PLUMED_CHECK_CXX_PACKAGE([asmjit],[
+#include <asmjit/asmjit.h>
+#include <stdio.h>
+using namespace asmjit;
+typedef int (*Func)(void);
+int main(int argc, char* argv[[]]) {
+  JitRuntime rt;
+  CodeHolder code;
+  code.init(rt.getCodeInfo());
+  X86Assembler a(&code);
+  a.mov(x86::eax, 1);
+  a.ret();
+  Func fn;
+  Error err = rt.add(&fn, &code);
+  if (err) return 1;
+  int result = fn();
+  printf("%d\n", result);
+  rt.release(fn);
+  return 0;
+}
+  ], [__PLUMED_HAS_ASMJIT],[asmjit])
+fi
+
 if test $fftw == true ; then
   PLUMED_CHECK_PACKAGE([fftw3.h],[fftw_execute],[__PLUMED_HAS_FFTW],[fftw3])
+fi
+
+if test $python == true  ; then
+# if PYTHON_BIN is defined, it is expected to be the full path to python
+# Otherwise, search from a list of names:
+  if test -z "$PYTHON_BIN" ; then
+    AC_CHECK_PROGS([PYTHON_BIN],[python])
+  fi
+  if test -n "$PYTHON_BIN"
+  then
+    AC_MSG_NOTICE([Python executable is $PYTHON_BIN])
+    AC_MSG_CHECKING([support for required python modules (setuptools, cython, subprocess, os, shutil)])
+testimport="
+from setuptools import setup
+from setuptools import Extension
+import subprocess
+import os
+import os.path
+import sys
+from shutil import copyfile
+from Cython.Build import cythonize
+"
+    if echo "$testimport" | "$PYTHON_BIN" 1>/dev/null 2>/dev/null;  then
+       AC_MSG_RESULT([yes])
+       AC_DEFINE([__PLUMED_HAS_PYTHON])
+    else
+       AC_MSG_RESULT([no])
+       AC_MSG_WARN([cannot enable python interface])
+       PYTHON_BIN=
+    fi
+  else
+    AC_MSG_WARN([cannot enable python interface])
+  fi
+fi
+
+if test "$af_ocl" == true ; then
+  PLUMED_CHECK_PACKAGE([arrayfire.h],[af_is_double],[__PLUMED_HAS_ARRAYFIRE],[afopencl])
+fi
+if test "$af_cuda" == true ; then
+  PLUMED_CHECK_PACKAGE([arrayfire.h],[af_is_double],[__PLUMED_HAS_ARRAYFIRE],[afcuda])
+fi
+if test "$af_cpu" == true ; then
+  PLUMED_CHECK_PACKAGE([arrayfire.h],[af_is_double],[__PLUMED_HAS_ARRAYFIRE],[afcpu])
 fi
 
 # in non-debug mode, add -DNDEBUG
@@ -658,21 +806,17 @@ if test "$debug_glibcxx" == true ; then
   AC_DEFINE([_GLIBCXX_DEBUG])
 fi
 
-if test "$cxx_exceptions" == true ; then
-  AC_MSG_NOTICE([Enabling c++ exceptions -D__PLUMED_HAS_EXCEPTIONS])
-  AC_DEFINE([__PLUMED_HAS_EXCEPTIONS])
-fi
-
 # this is necessary in many MPI implementations
 # I leave it by default, since it seems harmless
 AC_DEFINE([_REENTRANT])
 
 #### Options for dynamic library to work properly ####
 AC_SUBST(SOEXT)
-AC_SUBST(LD)
 AC_SUBST(LDSHARED)
 # these are libraries that should be linked also to MD engines
 AC_SUBST(STATIC_LIBS)
+# python executable
+AC_SUBST(PYTHON_BIN)
 
 AC_SUBST(MPIEXEC)
 
@@ -683,7 +827,7 @@ if test "$shared" == true ; then
     AC_MSG_NOTICE([Dynamic library extension is 'dylib'])
     AC_MSG_NOTICE([LDSHARED needs special flags])
     SOEXT=dylib
-    LDSHARED="$LDSHARED -undefined suppress -flat_namespace -dynamiclib -Wl,-headerpad_max_install_names"
+    LDSHARED="$LDSHARED -dynamiclib -Wl,-headerpad_max_install_names"
     if test "$rpath" = true ; then
       AC_MSG_NOTICE([Switching off rpath on OSX])
       rpath=false
@@ -696,6 +840,9 @@ if test "$shared" == true ; then
     SOEXT=so
     LDSHARED="$LDSHARED -shared"
     PLUMED_CHECK_LDFLAGS([-rdynamic])
+    if test "$bsymbolic" == true ; then
+      PLUMED_CHECK_LDFLAGS([-Wl,-Bsymbolic])
+    fi
   ;;
   (*)
     AC_MSG_NOTICE([*** Dynamic library only enabled on OSX and Linux ***])
@@ -850,6 +997,42 @@ if test $mpi_found == ok ; then
   fi
 fi
 
+if test "$SOEXT" == "dylib" ; then
+  use_absolute_soname=yes
+else
+  use_absolute_soname=no
+fi
+
+AC_SUBST(use_absolute_soname)
+if test "$absolute_soname" == true ; then
+  if test "$SOEXT" == "dylib" ; then
+    AC_MSG_WARN([--enable-absolute-soname has no effect on OSX])
+  else
+    AC_MSG_NOTICE([enabling absolute soname. Full path will be hardcoded in plumed library soname])
+    use_absolute_soname=yes
+  fi
+fi
+
+if test "$absolute_install_name" == false ; then
+  if test "$SOEXT" == "so" ; then
+    AC_MSG_WARN([--disable-absolute-install-name has no effect on Linux])
+  else
+    AC_MSG_NOTICE([enabling relative install_name. You will have to set DYLD_LIBRARY_PATH yor plumed libraries to be found at runtime])
+    use_absolute_soname=no
+  fi
+fi
+
+AC_SUBST(use_loader_path)
+if test "$SOEXT" == "dylib" ; then
+  if test "$loader_path" == true ; then
+    use_loader_path=yes
+  else
+    use_loader_path=no
+  fi
+else
+  use_loader_path=no
+fi
+
 #### This further tests are required to allow linking with non c++ compiler
 AC_MSG_NOTICE([PLUMED seems to be configured properly!])
 AC_MSG_NOTICE([**************************])
@@ -891,7 +1074,7 @@ EOF
     AC_MSG_RESULT([no])
   fi
 done
- 
+
 fi
 
 AC_SUBST(AR_CR)
@@ -933,6 +1116,56 @@ EOF
   fi
 done
  
+fi
+
+make_static_archive=no
+AC_SUBST(make_static_archive)
+
+if test "${static_archive}" == true ; then
+  if test -z "$LD_RO" || test -z "$AR_CR" ; then
+    AC_MSG_WARN([no way to create a static archive if ld -ro or ar cr do not work])
+    static_archive=false
+  fi
+fi
+
+if test "${static_archive}" == true ; then
+  AC_MSG_CHECKING([whether static-object constructors can be linked from a static archive])
+
+  magic_token=c1bc476d093a3a5c67b4530e6c54c633593fe9aa
+  rm -f conftest-*
+  
+  cat << EOF > conftest-main.cpp
+  void f(void);
+  int main(int argc,char**argv){ f(); return 0; }
+EOF
+  cat << EOF > conftest-f.cpp
+  void f(void){ return; }
+EOF
+  cat << EOF > conftest-g.cpp
+#include <iostream>
+  class g{
+    public:
+    g(){ std::cout<<"$magic_token\n"; }
+  } init;
+EOF
+
+  $CXX $CXXFLAGS -c conftest-main.cpp 1> /dev/null 2> /dev/null
+  $CXX $CXXFLAGS -c conftest-f.cpp 1> /dev/null 2> /dev/null
+  $CXX $CXXFLAGS -c conftest-g.cpp 1> /dev/null 2> /dev/null
+  
+  $LD_RO conftest-both.o conftest-f.o conftest-g.o 1> /dev/null 2> /dev/null
+# linking the previously merged objects should work:
+  $AR_CR conftest-both.a conftest-both.o 1> /dev/null 2> /dev/null
+# something like the following, instead, should not work:
+#  $AR_CR conftest-both.a conftest-f.o conftest-g.o 1> /dev/null 2> /dev/null
+#
+  $CXX $CXXFLAGS -o conftest.exe conftest-main.o conftest-both.a 1> /dev/null 2> /dev/null
+  if grep -q $magic_token ./conftest.exe ; then
+    AC_MSG_RESULT([yes])
+    make_static_archive=yes
+  else
+    AC_MSG_RESULT([no])
+  fi
 fi
 
 if test "${static_patch}" == true ; then
@@ -983,7 +1216,7 @@ EOF
       comment=
       test -n "$testlib" && comment=" with library $testlib"
       AC_MSG_CHECKING([whether $name can link a C++ object$comment])
-      $compexe $LDFLAGS $testlib $LIBS conftest.o conftest-main.o -o conftest.exe 1>/dev/null 2>/dev/null
+      $compexe conftest.o conftest-main.o $LDFLAGS $testlib $LIBS -o conftest.exe 1>/dev/null 2>/dev/null
       if test -f conftest.exe
       then
         found=yes
@@ -1012,6 +1245,32 @@ if test "$prefix" == NONE
 then
   prefix=/usr/local
 fi
+
+pkgconfig_bin=""
+
+AC_PATH_PROGS(pkgconfig_bin,pkg-config)
+
+if test -z "$BASH_COMPLETION_DIR" && test -n "$pkgconfig_bin"; then
+  if test "$prefix" == "$(pkg-config --variable=prefix bash-completion 2>/dev/null)"
+  then
+    AC_MSG_NOTICE([bash-completion is installed on the same prefix where plumed will be installed])
+    if pkg-config --variable=completionsdir bash-completion 2>/dev/null >/dev/null ; then
+      BASH_COMPLETION_DIR="$(pkg-config --variable=completionsdir  bash-completion 2>/dev/null)"
+    fi
+  else
+    AC_MSG_NOTICE([bash-completion is not installed or it is installed on a different prefix])
+    pkgconfig_bin=""
+  fi
+fi
+
+if test -n "$BASH_COMPLETION_DIR"
+then
+  AC_MSG_NOTICE([bash completion for plumed will be installed in $BASH_COMPLETION_DIR])
+else
+  AC_MSG_NOTICE([bash completion for plumed will not be installed])
+fi
+
+AC_SUBST(BASH_COMPLETION_DIR)
 
 AC_ARG_PROGRAM
 
@@ -1050,8 +1309,14 @@ AC_MSG_NOTICE([**** datadir: $datadir])
 AC_MSG_NOTICE([**** docdir: ${datarootdir}/doc/$program_name])
 AC_MSG_NOTICE([**** htmldir: $htmldir])
 AC_MSG_NOTICE([**** Executable will be named $program_name])
-AC_MSG_NOTICE([**** You can change paths later using options to "make install"])
-AC_MSG_NOTICE([**** e.g. with "make install prefix=/path"])
+AC_MSG_NOTICE([**** As of PLUMED 2.5, you cannot change paths anymore during "make install"])
+AC_MSG_NOTICE([**** Please configure and make clean to change the prefix])
+
+if test -z "$BASH_COMPLETION_DIR" ; then
+  AC_MSG_WARN([**** Bash completion for plumed will not be installed, please add the following two lines to your bashrc])
+  AC_MSG_WARN([**** _$program_name() { eval "\$($program_name --no-mpi completion 2>/dev/null)";}])
+  AC_MSG_WARN([**** complete -F _$program_name -o default $program_name])
+fi
 
 if test $mpi == true; then
   if test $mpi_found == ok; then

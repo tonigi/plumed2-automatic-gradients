@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2011-2017 The plumed team
+   Copyright (c) 2011-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -35,13 +35,17 @@
 #include <sstream>
 #include <cstdio>
 #include <cfloat>
+#include <array>
 
 using namespace std;
 namespace PLMD {
 
+constexpr size_t Grid::maxdim;
+
 Grid::Grid(const std::string& funcl, const std::vector<Value*> & args, const vector<std::string> & gmin,
            const vector<std::string> & gmax, const vector<unsigned> & nbin, bool dospline, bool usederiv, bool doclear) {
 // various checks
+  plumed_assert(args.size()<=maxdim) << "grid dim cannot exceed "<<maxdim;
   plumed_massert(args.size()==gmin.size(),"grid min dimensions in input do not match number of arguments");
   plumed_massert(args.size()==nbin.size(),"number of bins on input do not match number of arguments");
   plumed_massert(args.size()==gmax.size(),"grid max dimensions in input do not match number of arguments");
@@ -79,6 +83,7 @@ void Grid::Init(const std::string& funcl, const std::vector<std::string> &names,
                 const std::vector<bool> &isperiodic, const std::vector<std::string> &pmin, const std::vector<std::string> &pmax ) {
   contour_location=0.0; fmt_="%14.9f";
 // various checks
+  plumed_assert(names.size()<=maxdim) << "grid size cannot exceed "<<maxdim;
   plumed_massert(names.size()==gmin.size(),"grid dimensions in input do not match number of arguments");
   plumed_massert(names.size()==nbin.size(),"grid dimensions in input do not match number of arguments");
   plumed_massert(names.size()==gmax.size(),"grid dimensions in input do not match number of arguments");
@@ -138,6 +143,10 @@ vector<std::string> Grid::getMax() const {
 
 vector<double> Grid::getDx() const {
   return dx_;
+}
+
+double Grid::getDx(index_t j) const {
+  return dx_[j];
 }
 
 double Grid::getBinVolume() const {
@@ -204,20 +213,41 @@ vector<unsigned> Grid::getIndices(index_t index) const {
   return indices;
 }
 
+void Grid::getIndices(index_t index, std::vector<unsigned>& indices) const {
+  if (indices.size()!=dimension_) indices.resize(dimension_);
+  index_t kk=index;
+  indices[0]=(index%nbin_[0]);
+  for(unsigned int i=1; i<dimension_-1; ++i) {
+    kk=(kk-indices[i-1])/nbin_[i-1];
+    indices[i]=(kk%nbin_[i]);
+  }
+  if(dimension_>=2) {
+    indices[dimension_-1]=((kk-indices[dimension_-2])/nbin_[dimension_-2]);
+  }
+}
+
 vector<unsigned> Grid::getIndices(const vector<double> & x) const {
   plumed_dbg_assert(x.size()==dimension_);
-  vector<unsigned> indices;
+  vector<unsigned> indices(dimension_);
   for(unsigned int i=0; i<dimension_; ++i) {
-    indices.push_back(unsigned(floor((x[i]-min_[i])/dx_[i])));
+    indices[i] = unsigned(floor((x[i]-min_[i])/dx_[i]));
   }
   return indices;
 }
 
+void Grid::getIndices(const vector<double> & x, std::vector<unsigned>& indices) const {
+  plumed_dbg_assert(x.size()==dimension_);
+  if (indices.size()!=dimension_) indices.resize(dimension_);
+  for(unsigned int i=0; i<dimension_; ++i) {
+    indices[i] = unsigned(floor((x[i]-min_[i])/dx_[i]));
+  }
+}
+
 vector<double> Grid::getPoint(const vector<unsigned> & indices) const {
   plumed_dbg_assert(indices.size()==dimension_);
-  vector<double> x;
+  vector<double> x(dimension_);
   for(unsigned int i=0; i<dimension_; ++i) {
-    x.push_back(min_[i]+(double)(indices[i])*dx_[i]);
+    x[i]=min_[i]+(double)(indices[i])*dx_[i];
   }
   return x;
 }
@@ -241,7 +271,7 @@ void Grid::getPoint(const std::vector<unsigned> & indices,std::vector<double> & 
   plumed_dbg_assert(indices.size()==dimension_);
   plumed_dbg_assert(point.size()==dimension_);
   for(unsigned int i=0; i<dimension_; ++i) {
-    point[i]=(min_[i]+(double)(indices[i])*dx_[i]);
+    point[i]=min_[i]+(double)(indices[i])*dx_[i];
   }
 }
 
@@ -304,24 +334,24 @@ vector<Grid::index_t> Grid::getNeighbors
   return getNeighbors(getIndices(index),nneigh);
 }
 
-vector<Grid::index_t> Grid::getSplineNeighbors(const vector<unsigned> & indices)const {
+void Grid::getSplineNeighbors(const vector<unsigned> & indices, vector<Grid::index_t>& neighbors, unsigned& nneighbors)const {
   plumed_dbg_assert(indices.size()==dimension_);
-  vector<index_t> neighbors;
   unsigned nneigh=unsigned(pow(2.0,int(dimension_)));
+  if (neighbors.size()!=nneigh) neighbors.resize(nneigh);
 
+  vector<unsigned> nindices(dimension_);
+  unsigned inind; nneighbors = 0;
   for(unsigned int i=0; i<nneigh; ++i) {
-    unsigned tmp=i;
-    vector<unsigned> nindices;
+    unsigned tmp=i; inind=0;
     for(unsigned int j=0; j<dimension_; ++j) {
       unsigned i0=tmp%2+indices[j];
       tmp/=2;
       if(!pbc_[j] && i0==nbin_[j]) continue;
       if( pbc_[j] && i0==nbin_[j]) i0=0;
-      nindices.push_back(i0);
+      nindices[inind++]=i0;
     }
-    if(nindices.size()==dimension_) neighbors.push_back(getIndex(nindices));
+    if(inind==dimension_) neighbors[nneighbors++]=getIndex(nindices);
   }
-  return neighbors;
 }
 
 vector<Grid::index_t> Grid::getNearestNeighbors(const index_t index) const {
@@ -350,10 +380,11 @@ void Grid::addKernel( const KernelFunctions& kernel ) {
   plumed_dbg_assert( kernel.ndim()==dimension_ );
   std::vector<unsigned> nneighb=kernel.getSupport( dx_ );
   std::vector<index_t> neighbors=getNeighbors( kernel.getCenter(), nneighb );
-  std::vector<double> xx( dimension_ ); std::vector<Value*> vv( dimension_ );
+  std::vector<double> xx( dimension_ );
+  std::vector<std::unique_ptr<Value>> vv( dimension_ );
   std::string str_min, str_max;
   for(unsigned i=0; i<dimension_; ++i) {
-    vv[i]=new Value();
+    vv[i].reset(new Value());
     if( pbc_[i] ) {
       Tools::convert(min_[i],str_min);
       Tools::convert(max_[i],str_max);
@@ -363,17 +394,21 @@ void Grid::addKernel( const KernelFunctions& kernel ) {
     }
   }
 
+// vv_ptr contains plain pointers obtained from vv.
+// this is the simplest way to replace a unique_ptr here.
+// perhaps the interface of kernel.evaluate() should be changed
+// in order to accept a std::vector<std::unique_ptr<Value>>
+  auto vv_ptr=Tools::unique2raw(vv);
+
   std::vector<double> der( dimension_ );
   for(unsigned i=0; i<neighbors.size(); ++i) {
     index_t ineigh=neighbors[i];
     getPoint( ineigh, xx );
     for(unsigned j=0; j<dimension_; ++j) vv[j]->set(xx[j]);
-    double newval = kernel.evaluate( vv, der, usederiv_ );
+    double newval = kernel.evaluate( vv_ptr, der, usederiv_ );
     if( usederiv_ ) addValueAndDerivatives( ineigh, newval, der );
     else addValue( ineigh, newval );
   }
-
-  for(unsigned i=0; i<dimension_; ++i) delete vv[i];
 }
 
 double Grid::getValue(index_t index) const {
@@ -431,28 +466,29 @@ double Grid::getValueAndDerivatives
 
   if(dospline_) {
     double X,X2,X3,value;
-    vector<double> fd(dimension_);
-    vector<double> C(dimension_);
-    vector<double> D(dimension_);
-    vector<double> dder(dimension_);
+    std::array<double,maxdim> fd, C, D;
+    std::vector<double> dder(dimension_);
 // reset
     value=0.0;
     for(unsigned int i=0; i<dimension_; ++i) der[i]=0.0;
 
-    vector<unsigned> indices=getIndices(x);
-    vector<index_t> neigh=getSplineNeighbors(indices);
-    vector<double>   xfloor=getPoint(x);
+    vector<unsigned> indices(dimension_);
+    getIndices(x, indices);
+    vector<double> xfloor(dimension_);
+    getPoint(indices, xfloor);
+    vector<index_t> neigh; unsigned nneigh; getSplineNeighbors(indices, neigh, nneigh);
 
 // loop over neighbors
-    for(unsigned int ipoint=0; ipoint<neigh.size(); ++ipoint) {
+    vector<unsigned> nindices;
+    for(unsigned int ipoint=0; ipoint<nneigh; ++ipoint) {
       double grid=getValueAndDerivatives(neigh[ipoint],dder);
-      vector<unsigned> nindices=getIndices(neigh[ipoint]);
+      getIndices(neigh[ipoint], nindices);
       double ff=1.0;
 
       for(unsigned j=0; j<dimension_; ++j) {
         int x0=1;
         if(nindices[j]==indices[j]) x0=0;
-        double dx=getDx()[j];
+        double dx=getDx(j);
         X=fabs((x[j]-xfloor[j])/dx-(double)x0);
         X2=X*X;
         X3=X2*X;
@@ -613,10 +649,10 @@ void Grid::writeCubeFile(OFile& ofile, const double& lunit) {
   }
 }
 
-Grid* Grid::create(const std::string& funcl, const std::vector<Value*> & args, IFile& ifile,
-                   const vector<std::string> & gmin,const vector<std::string> & gmax,
-                   const vector<unsigned> & nbin,bool dosparse, bool dospline, bool doder) {
-  Grid* grid=Grid::create(funcl,args,ifile,dosparse,dospline,doder);
+std::unique_ptr<Grid> Grid::create(const std::string& funcl, const std::vector<Value*> & args, IFile& ifile,
+                                   const vector<std::string> & gmin,const vector<std::string> & gmax,
+                                   const vector<unsigned> & nbin,bool dosparse, bool dospline, bool doder) {
+  std::unique_ptr<Grid> grid=Grid::create(funcl,args,ifile,dosparse,dospline,doder);
   std::vector<unsigned> cbin( grid->getNbin() );
   std::vector<std::string> cmin( grid->getMin() ), cmax( grid->getMax() );
   for(unsigned i=0; i<args.size(); ++i) {
@@ -631,9 +667,9 @@ Grid* Grid::create(const std::string& funcl, const std::vector<Value*> & args, I
   return grid;
 }
 
-Grid* Grid::create(const std::string& funcl, const std::vector<Value*> & args, IFile& ifile, bool dosparse, bool dospline, bool doder)
+std::unique_ptr<Grid> Grid::create(const std::string& funcl, const std::vector<Value*> & args, IFile& ifile, bool dosparse, bool dospline, bool doder)
 {
-  Grid* grid=NULL;
+  std::unique_ptr<Grid> grid;
   unsigned nvar=args.size(); bool hasder=false; std::string pstring;
   std::vector<int> gbin1(nvar); std::vector<unsigned> gbin(nvar);
   std::vector<std::string> labels(nvar),gmin(nvar),gmax(nvar);
@@ -667,8 +703,8 @@ Grid* Grid::create(const std::string& funcl, const std::vector<Value*> & args, I
     }
   }
 
-  if(!dosparse) {grid=new Grid(funcl,args,gmin,gmax,gbin,dospline,doder);}
-  else {grid=new SparseGrid(funcl,args,gmin,gmax,gbin,dospline,doder);}
+  if(!dosparse) {grid.reset(new Grid(funcl,args,gmin,gmax,gbin,dospline,doder));}
+  else {grid.reset(new SparseGrid(funcl,args,gmin,gmax,gbin,dospline,doder));}
 
   vector<double> xx(nvar),dder(nvar);
   vector<double> dx=grid->getDx();
@@ -953,8 +989,8 @@ double Grid::integrate( std::vector<unsigned>& npoints ) {
   for(unsigned i=0; i<ntotgrid; ++i) {
     t_index[0]=(i%npoints[0]);
     unsigned kk=i;
-    for(unsigned j=1; j<dimension_-1; ++j) { kk=(kk-t_index[j-1])/npoints[i-1]; t_index[j]=(kk%npoints[i]); }
-    if( dimension_>=2 ) t_index[dimension_-1]=((kk-t_index[dimension_-1])/npoints[dimension_-2]);
+    for(unsigned j=1; j<dimension_-1; ++j) { kk=(kk-t_index[j-1])/npoints[j-1]; t_index[j]=(kk%npoints[j]); }
+    if( dimension_>=2 ) t_index[dimension_-1]=((kk-t_index[dimension_-2])/npoints[dimension_-2]);
 
     for(unsigned j=0; j<dimension_; ++j) vals[j]=min_[j] + t_index[j]*ispacing[j];
 

@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016-2017 The VES code team
+   Copyright (c) 2016-2018 The VES code team
    (see the PEOPLE-VES file at the root of this folder for a list of names)
 
    See http://www.ves-code.org for more information.
@@ -854,7 +854,7 @@ size_t CoeffsVector::readDataFromFile(IFile& ifile, const bool ignore_missing_co
     ncoeffs_read++;
     if(ncoeffs_read==numberOfCoeffs()) {
       if((static_cast<unsigned int>(idx_tmp)+1)!=numberOfCoeffs()) {
-        plumed_merror("something strange about the coefficent file that is being read in, perhaps multiple entries or missing values");
+        plumed_merror("something strange about the coefficient file that is being read in, perhaps multiple entries or missing values");
       }
       break;
     }

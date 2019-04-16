@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2014-2017 The plumed team
+   Copyright (c) 2014-2019 The plumed team
    (see the PEOPLE file at the root of the distribution for a list of names)
 
    See http://www.plumed.org for more information.
@@ -35,7 +35,7 @@ Direction::Direction( const ReferenceConfigurationOptions& ro ):
 }
 
 void Direction::read( const PDB& pdb ) {
-  readAtomsFromPDB( pdb );
+  readAtomsFromPDB( pdb, true );
   readArgumentsFromPDB( pdb );
 }
 

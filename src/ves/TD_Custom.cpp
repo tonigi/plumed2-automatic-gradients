@@ -1,5 +1,5 @@
 /* +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   Copyright (c) 2016-2017 The VES code team
+   Copyright (c) 2016-2018 The VES code team
    (see the PEOPLE-VES file at the root of this folder for a list of names)
 
    See http://www.ves-code.org for more information.
@@ -32,23 +32,6 @@
 namespace PLMD {
 namespace ves {
 
-static std::map<std::string, double> leptonConstants= {
-  {"e", std::exp(1.0)},
-  {"log2e", 1.0/std::log(2.0)},
-  {"log10e", 1.0/std::log(10.0)},
-  {"ln2", std::log(2.0)},
-  {"ln10", std::log(10.0)},
-  {"pi", pi},
-  {"pi_2", pi*0.5},
-  {"pi_4", pi*0.25},
-//  {"1_pi", 1.0/pi},
-//  {"2_pi", 2.0/pi},
-//  {"2_sqrtpi", 2.0/std::sqrt(pi)},
-  {"sqrt2", std::sqrt(2.0)},
-  {"sqrt1_2", std::sqrt(0.5)}
-};
-
-
 //+PLUMEDOC VES_TARGETDIST TD_CUSTOM
 /*
 Target distribution given by an arbitrary mathematical expression (static or dynamic).
@@ -74,11 +57,11 @@ best estimate of \f$F(\mathbf{s})\f$, similarly as for the
 \ref TD_WELLTEMPERED "well-tempered target distribution".
 Furthermore, the inverse temperature \f$\beta = (k_{\mathrm{B}}T)^{-1}\f$ and
 the thermal energy \f$k_{\mathrm{B}}T\f$ can be included
-by using the _beta_ and _kBT_ variables.
+by using the _beta_ and \f$k_B T\f$ variables.
 
 The target distribution will be automatically normalized over the region on
 which it is defined on. Therefore, the function given in
-FUNCTION needs to be non-negative and normalizable. The
+FUNCTION needs to be non-negative and it must be possible to normalize the function. The
 code will perform checks to make sure that this is indeed the case.
 
 
@@ -109,7 +92,7 @@ TD_CUSTOM ...
 By using the _FE_ variable the target distribution can depend on
 the free energy surface \f$F(\mathbf{s})\f$. For example,
 the following input is identical to using \ref TD_WELLTEMPERED with
-BIASFACTOR=10.
+a bias factor of 10.
 \plumedfile
 TD_CUSTOM ...
  FUNCTION=exp(-(beta/10.0)*FE)
@@ -117,7 +100,7 @@ TD_CUSTOM ...
 ... TD_CUSTOM
 \endplumedfile
 Here the inverse temperature is automatically obtained by using the _beta_
-variable. It is also possible to use the _kBT_ variable. The following
+variable. It is also possible to use the \f$k_B T\f$ variable. The following
 syntax will give the exact same results as the syntax above
 \plumedfile
 TD_CUSTOM ...
@@ -160,7 +143,7 @@ PLUMED_REGISTER_ACTION(TD_Custom,"TD_CUSTOM")
 
 void TD_Custom::registerKeywords(Keywords& keys) {
   TargetDistribution::registerKeywords(keys);
-  keys.add("compulsory","FUNCTION","The function you wish to use for the target distribution where you should use the variables _s1_,_s2_,... for the arguments. You can also use the current estimate of the FES by using the variable _FE_ and the temperature by using the _kBT_ and _beta_ variables.");
+  keys.add("compulsory","FUNCTION","The function you wish to use for the target distribution where you should use the variables _s1_,_s2_,... for the arguments. You can also use the current estimate of the FES by using the variable _FE_ and the temperature by using the \\f$k_B T\\f$ and _beta_ variables.");
   keys.use("WELLTEMPERED_FACTOR");
   keys.use("SHIFT_TO_ZERO");
 }
@@ -186,7 +169,7 @@ TD_Custom::TD_Custom(const ActionOptions& ao):
   checkRead();
   //
   try {
-    lepton::ParsedExpression pe=lepton::Parser::parse(func_str).optimize(leptonConstants);
+    lepton::ParsedExpression pe=lepton::Parser::parse(func_str).optimize(lepton::Constants());
     log<<"  function as parsed by lepton: "<<pe<<"\n";
     expression=pe.createCompiledExpression();
   }
