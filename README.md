@@ -9,12 +9,8 @@ illustrating two approaches to automated gradient computation for
 collective variables in PLUMED.
 
 It is a fork of the PLUMED 2 repository (www.plumed.org) taken at
-release v2.4.0.
-
-Depending on how you obtained this archive, you will find either the
-full distribution, or the new modules with their regtests only. The
-new code is contained in submodules (directories) named
-`src/curvature_codegen` (code generation approach from symbolic
+release v2.5.1.  The new code is contained in submodules (directories)
+named `src/curvature_codegen` (code generation approach from symbolic
 expressions by SymPy) and `src/curvature_autodiff` (code
 differentiation approach with the Stan Math library). Example files
 with regression tests are provided in the directories
@@ -28,8 +24,9 @@ repository with the --recursive option, or (after clone)
 
 	git submodule update --init --recursive
 
-To test, on most common machines the following instructions should get
-you started. After extracting the distribution:
+If not found, the above command will be performed as part of the build
+process. To test, on most common machines the following instructions
+should get you started. After extracting the distribution:
 
     ./configure 
     make -j4
