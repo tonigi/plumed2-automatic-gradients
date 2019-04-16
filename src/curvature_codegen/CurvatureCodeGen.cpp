@@ -49,8 +49,8 @@ radius) for straight polymers.
 By default the computation takes into account periodic boundary
 conditions, unless the NOPBC flag is given.
 
-To compute several local curvatures at once see the \ref CURVATURE_CODEGENS
-multicolvar.
+To compute several local curvatures at once see the
+\ref CURVATURE_MULTICOLVAR_CODEGEN multicolvar.
 
 
 

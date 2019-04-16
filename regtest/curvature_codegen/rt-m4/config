@@ -1,2 +1,2 @@
 type=driver
-arg="--plumed plumed.dat --ixyz arc3.xyz --dump-forces FORCES"
+arg="--plumed plumed.dat --ixyz arc3.xyz --dump-forces FORCES --dump-forces-fmt %-06f"

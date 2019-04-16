@@ -34,7 +34,7 @@ namespace curvature_autodiff {
 
 This file provides a dummy colvar to demonstrate how to implement
 functions and have the [Stan Math](https://github.com/stan-dev/math)
-library compute their derivatives at compile-time.
+library compute their derivatives at run-time.
 
 
 \par The Stan Math Library
@@ -49,6 +49,17 @@ Please see the source code of \ref CurvatureAutoDiff.cpp .
 > Bob Carpenter, Matthew D. Hoffman, Marcus Brubaker, Daniel Lee,
   Peter Li, and Michael J. Betancourt. 2015. The Stan Math Library:
   Reverse-Mode Automatic Differentiation in C++. arXiv 1509.07164.
+
+
+\par Examples
+
+The following input tells PLUMED to print the curvature at
+atoms 1,2,3 and its reciprocal. Usage is similar to \ref CURVATURE_CODEGEN.
+
+\verbatim
+c1:  CURVATURE_AUTODIFF ATOMS=1,2,3
+c1i: CURVATURE_AUTODIFF ATOMS=1,2,3 INVERSE
+PRINT ARG=c1, c1i
 
 
 */

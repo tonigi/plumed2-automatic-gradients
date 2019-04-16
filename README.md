@@ -21,8 +21,12 @@ with regression tests are provided in the directories
 `regtest/curvature_codegen` and `regtest/curvature_autodiff`
 respectively.  The rest of PLUMED 2 repository is unchanged.
 
-You may use the supplied C++ files as templates to implement your own
-CVs. The modules can be enabled or disabled independently.
+
+If you are using GIT, the Stan Math library is referenced as a
+submodule: it will be automatically downloaded if you clone the
+repository with the --recursive option, or (after clone) 
+
+	git submodule update --init --recursive
 
 To test, on most common machines the following instructions should get
 you started. After extracting the distribution:
@@ -30,9 +34,12 @@ you started. After extracting the distribution:
     ./configure 
     make -j4
 
-You can enable and disable the modules independently, as follows:
+
+You may use the supplied C++ files as templates to implement your own
+CVs. The modules can be enabled or disabled independently, as follows:
 
     ./configure --enable-modules=+curvature_codegen:-curvature_autodiff
+
 
 
 
@@ -44,6 +51,9 @@ is in src/curvature_codegen/sympy_codegen directory. To regenerate the
 code, execute the `CurvatureCodegen.ipynb` file (you will need Sympy,
 available from www.sympy.org; the easiest way to install it is via
 Conda).
+
+The example CV defines the keywords `CURVATURE_CODEGEN` and
+`CURVATURE_MULTICOLVAR_CODEGEN`.
 
 To test:
 
@@ -63,19 +73,14 @@ library (available at https://github.com/stan-dev/math; tested with
 release 2.16). Depending on your system, you may need to adjust
 Makefile paths.
 
+The example CV defines the keyword `CURVATURE_AUTODIFF`.
+
 To test:
 
-    ./configure 
-    make -j4
     cd regtest/curvature_autodiff/rt-1        # Or any other of the examples
     ../../../src/lib/plumed driver --plumed plumed.dat --ixyz spiral.xyz
 
-(Note: if you are using GIT, the Stan Math library is referenced as a
-submodule: it will be automatically downloaded if you clone the
-repository with the --recursive option.)
 
-
-
-
-
+Note that `regtest/curvature_autodiff/rt-2` invokes
+`CURVATURE_CODEGEN` for comparison.
 
