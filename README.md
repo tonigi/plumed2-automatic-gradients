@@ -1,7 +1,8 @@
 Automatic Gradient Computation for Collective Variables in PLUMED 2
 ========================================
 
-This repository contains example code from the paper *How to
+The [repository](https://github.com/tonigi/plumed2-automatic-gradients.git) 
+contains example code from the paper *How to
 Differentiate Collective Variables in Free Energy Codes:
 Computer-Algebra Code Generation and Automatic Differentiation*,
 [10.1016/j.cpc.2018.02.017](http://dx.doi.org/10.1016/j.cpc.2018.02.017),
@@ -17,6 +18,10 @@ with regression tests are provided in the directories
 `regtest/curvature_codegen` and `regtest/curvature_autodiff`
 respectively.  The rest of PLUMED 2 repository is unchanged.
 
+Depending on how you obtained this archive, you have either
+a full PLUMED distribution, or just the new directories; in the latter
+case, you should merge them manually (or clone the 
+[full repository](https://github.com/tonigi/plumed2-automatic-gradients.git) ). 
 
 If you are using GIT, the Stan Math library is referenced as a
 submodule: it will be automatically downloaded if you clone the
