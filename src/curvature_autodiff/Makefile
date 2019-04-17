@@ -15,7 +15,7 @@ endif
 
 ifneq ($(shell test -e $(STANMATH)/stan && echo -n yes),yes)
     $(error STAN module not found. Please copy or clone it in src/curvature_autodiff/math. Consider: git submodule add http://github.com/stan-dev/math.git src/curvature_autodiff/math )
-else
+endif
 
 
 # generic makefile
