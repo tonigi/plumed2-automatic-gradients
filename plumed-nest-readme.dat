@@ -1,0 +1,11 @@
+ENDPLUMED
+
+This is a placeholder file. This PLUMED-NEST entry provides code
+illustrating two approaches to automate gradient computation for
+collective variables in PLUMED. The input files in this repository
+exercise the example CVs (namely, CURVATURE_CODEGEN,
+CURVATURE_AUTODIFF, and CURVATURE_MULTICOLVAR_CODEGEN) implemented in
+https://github.com/tonigi/plumed2-automatic-gradients.git and not
+found in the "official" PLUMED distribution.
+ 
+Please refer to the above repository and paper for full instructions.
