@@ -2,8 +2,8 @@ USE=core tools colvar
 
 STANMATH=math
 ADDCPPFLAGS += -I$(STANMATH) -I$(STANMATH)/lib/eigen_3.3.3/ \
-	-I$(STANMATH)/lib/sundials_4.1.0/include  \
-	-I$(STANMATH)/lib/boost_1.69.0/
+	-I$(STANMATH)/lib/sundials_3.1.0/include  \
+	-I$(STANMATH)/lib/boost_1.66.0/
 
 # This is mostly for macports, which extracts but does not do submodule
 ifeq ($(shell test -e $(STANMATH)/stan && echo -n yes),yes)
