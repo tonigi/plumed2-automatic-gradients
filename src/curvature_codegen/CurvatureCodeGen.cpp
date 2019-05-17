@@ -23,7 +23,7 @@
 #include "colvar/Colvar.h"
 #include "colvar/ActionRegister.h"
 #include "tools/Pbc.h"
-#include "Wrapper.h"
+#include "CodeGenWrapper.h"
 
 #include <string>
 #include <cmath>

@@ -23,7 +23,7 @@
 #include "multicolvar/AtomValuePack.h"
 #include "core/PlumedMain.h"
 #include "core/ActionRegister.h"
-#include "Wrapper.h"
+#include "CodeGenWrapper.h"
 
 #include <string>
 #include <cmath>
