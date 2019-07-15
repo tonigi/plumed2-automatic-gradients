@@ -1,7 +1,7 @@
 
 /* Hack: including a C file to wrap in the appropriate namespace */
 
-#include "Wrapper.h"
+#include "CodeGenWrapper.h"
 #include <cmath>
 
 namespace PLMD {
