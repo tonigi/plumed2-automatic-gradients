@@ -82,6 +82,10 @@ PRINT ARG=c1, c1i
 
      using Eigen::Matrix;
      using Eigen::Dynamic;
+
+   When C++14 becomes the standard for PLUMED, we may substitute this
+   code with a simpler "lambda" expression (see
+   PlumedAutoDiff-Lugano-2019 slides).
 */
 
 struct curvature_fun {
@@ -94,23 +98,26 @@ public:
   T operator()(const Eigen::Matrix<T, Eigen::Dynamic, 1>& x)
   const {
     // Reshape for convenience. This will make vector expressions
-    // quite readable. [Also: r1 << x(0), x(1), x(2)]
-    Eigen::Matrix<T, 3, 1> r1, r2, r3;
-    r1 = x.segment(0,3);
-    r2 = x.segment(3,3);
-    r3 = x.segment(6,3);
+    // quite readable.
 
-    Eigen::Matrix<T, 3, 1> r12, r32, r13;
-    r12 = r1-r2;
-    r32 = r3-r2;
-    r13 = r1-r3;
+    typedef Eigen::Matrix<T, 3, 1> T3;
+    T3 a_, o_, b_;
+    a_ << x(0) , x(1) , x(2);
+    o_ << x(3) , x(4) , x(5);
+    b_ << x(6) , x(7) , x(8);
+	
+    // "auto xx=..." also works, but it's slower in this case.
+    T3 xx = a_-o_;
+    T3 yy = b_-o_;
+    T3 x_y = a_-b_;
 
-    T cos2_a = pow(r12.dot(r32),2.0) / r12.dot(r12) / r32.dot(r32);
+    // Plain Eigen vector operations. Scalars need be of type "T"
+    T cos2_a = pow(xx.dot(yy),2.0) / xx.dot(xx) / yy.dot(yy);
     T sin2_a = 1.0 - cos2_a;
-
-    T radius2 = r13.dot(r13) / sin2_a / 4.0;
+    
+    T radius2 = x_y.dot(x_y) / sin2_a / 4.0;
     T radius = sqrt(radius2);
-
+	
     if(inverse)
       radius = 1.0/radius;
 
