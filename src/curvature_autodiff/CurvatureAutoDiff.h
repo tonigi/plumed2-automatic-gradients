@@ -31,7 +31,7 @@
 #include <string>
 #include <cmath>
 
-#include <stan/math/rev/mat.hpp>
+#include <stan/math.hpp>
 
 
 namespace PLMD {

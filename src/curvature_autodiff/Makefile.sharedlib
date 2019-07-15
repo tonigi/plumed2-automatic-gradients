@@ -1,0 +1,7 @@
+
+STANMATH := math
+INC := $(STANMATH):$(STANMATH)/lib/eigen_3.3.3/:$(STANMATH)/lib/sundials_3.1.0/include:$(STANMATH)/lib/boost_1.66.0/
+
+default:
+	CPLUS_INCLUDE_PATH=$(INC) plumed mklib CurvatureAutoDiff.cpp
+
